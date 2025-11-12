@@ -1,0 +1,28 @@
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.swp
+.env
+.venv
+.envrc
+*.egg-info/
+.dist/
+build/
+dist/
+.env.local
+.DS_Store
+# Virtual environment defaults
+venv/
+.venv/
+# Python packaging
+pip-wheel-metadata/
+.eggs/
+# Local data
+*.log
+.cache/
+.pytest_cache/
+.mypy_cache/
+# Editors
+.idea/
+.vscode/

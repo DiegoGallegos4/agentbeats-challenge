@@ -1,0 +1,17 @@
+[project]
+name = "agentbeats"
+version = "0.1.0"
+description = "FutureBench-Finance evaluator and predictor scaffolding"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "pydantic>=2.8",
+    "typer>=0.12",
+]
+
+[project.scripts]
+agentbeats = "agentbeats.cli:app"
+
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
