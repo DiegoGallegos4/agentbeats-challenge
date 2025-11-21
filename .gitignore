@@ -23,6 +23,9 @@ pip-wheel-metadata/
 .cache/
 .pytest_cache/
 .mypy_cache/
+.ruff_cache/
+# Generated data
+data/generated/
 # Editors
 .idea/
 .vscode/

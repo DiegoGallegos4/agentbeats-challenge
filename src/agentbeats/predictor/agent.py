@@ -4,28 +4,55 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Iterable, List, Optional, Type, TypeVar
+from typing import Callable, Iterable, List, Optional, Type, TypeVar
 import random
 
 from pydantic import BaseModel
 
 from ..config import PredictorConfig
+from ..domain.finance import FINANCE_KEYWORDS
 from ..models import (
     EventSpec,
+    EvidenceItem,
     PredictionMetadata,
     PredictionPayload,
     PredictionRecord,
 )
+from ..tools import AlphaVantageClient, NewsEvidenceFetcher
+from .evidence.alpha import AlphaVantageEvidenceModule
+from .evidence.base import EvidencePayload
+from .evidence.news import NewsEvidenceModule
 
 T_Model = TypeVar("T_Model", bound=BaseModel)
+
+
+LogFn = Callable[[str, str], None]
 
 
 class PurpleAgent:
     """Fixture-driven predictor that emits schema-compliant JSONL outputs."""
 
-    def __init__(self, config: PredictorConfig, seed: int = 42):
+    def __init__(
+        self,
+        config: PredictorConfig,
+        seed: int = 42,
+        news_fetcher: NewsEvidenceFetcher | None = None,
+    ):
         self.config = config
         self._rng = random.Random(seed)
+        self.news_fetcher = news_fetcher or NewsEvidenceFetcher(self.config.news_fixtures)
+        self.alpha_client = (
+            AlphaVantageClient(api_key=self.config.alpha_vantage_api_key)
+            if self.config.alpha_vantage_api_key
+            else None
+        )
+        self.evidence_modules = self._build_evidence_modules()
+
+    def _build_evidence_modules(self):
+        modules = [NewsEvidenceModule(self.news_fetcher)]
+        if self.alpha_client and self.alpha_client.is_configured():
+            modules.append(AlphaVantageEvidenceModule(self.alpha_client, {k: (v["symbol"], v["type"]) for k, v in FINANCE_KEYWORDS.items()}))
+        return modules
 
     def _load_jsonl(self, path: Path, model: Type[T_Model]) -> Iterable[T_Model]:
         with path.open("r", encoding="utf-8") as handle:
@@ -36,25 +63,74 @@ class PurpleAgent:
                 yield model.model_validate_json(line)
 
     def ingest_events(self, events_path: Optional[Path] = None) -> List[EventSpec]:
-        path = events_path or self.config.fixture_events
-        if not path:
-            msg = "Event path must be provided via CLI or config."
-            raise ValueError(msg)
-        return list(self._load_jsonl(path, EventSpec))
+        candidates = [
+            events_path,
+            self.config.events_snapshot,
+            self.config.fallback_events,
+        ]
+        for candidate in candidates:
+            if candidate and Path(candidate).exists():
+                return list(self._load_jsonl(candidate, EventSpec))
+        raise FileNotFoundError("No event snapshot available. Run `agentbeats ingest-events` first.")
 
-    def predict(self, events: List[EventSpec]) -> List[PredictionRecord]:
-        now = datetime.now(timezone.utc)
+    def gather_evidence(self, event: EventSpec) -> tuple[List[EvidenceItem], float, Optional[float], List[str]]:
+        evidence: List[EvidenceItem] = []
+        sentiment = 0.0
+        market_probability: Optional[float] = event.baseline_probability
+        logs: List[str] = []
+        for module in self.evidence_modules:
+            payload: EvidencePayload = module.gather(event)
+            evidence.extend(payload.evidence)
+            sentiment += payload.signal
+            if payload.market_probability is not None:
+                market_probability = payload.market_probability
+            logs.append(
+                f"{module.__class__.__name__}: {len(payload.evidence)} evidence item(s), signal {payload.signal:+.2f}"
+            )
+        return evidence, sentiment, market_probability, logs
+
+    def analyze_event(self, event: EventSpec, sentiment: float, evidence: List[EvidenceItem]) -> str:
+        if not evidence:
+            return f"No fresh evidence for {event.question}; defaulting to prior."
+        polarity = "supportive" if sentiment >= 0 else "headwind"
+        return (
+            f"{polarity.title()} news flow ({sentiment:+.2f}) "
+            f"based on {len(evidence)} article(s) covering {', '.join(event.tags or ['general trends'])}."
+        )
+
+    def predict(
+        self,
+        events: List[EventSpec],
+        as_of: Optional[datetime] = None,
+        log: Optional[LogFn] = None,
+    ) -> List[PredictionRecord]:
+        timestamp = as_of or datetime.now(timezone.utc)
         predictions: List[PredictionRecord] = []
         for idx, event in enumerate(events):
-            probability = round(self._rng.uniform(0.2, 0.8), 2)
+            if log:
+                log(f"• [{event.id}] {event.question}", "yellow")
+            evidence, sentiment, market_prob, evidence_logs = self.gather_evidence(event)
+            if log:
+                for entry in evidence_logs:
+                    log(f"   - {entry}", "cyan")
+            base_prob = self._rng.uniform(0.2, 0.8)
+            probability = round(min(max(base_prob + sentiment * 0.1, 0.05), 0.95), 2)
+            if market_prob is not None:
+                probability = round((probability + market_prob) / 2, 2)
+            analysis = self.analyze_event(event, sentiment, evidence)
             predictions.append(
                 PredictionRecord(
                     id=event.id,
-                    prediction=PredictionPayload(probability=probability),
+                    prediction=PredictionPayload(
+                        probability=probability,
+                        rationale=evidence,
+                        analysis=analysis,
+                    ),
                     metadata=PredictionMetadata(
                         model="purple_stub",
-                        timestamp=now,
+                        timestamp=timestamp,
                         version="0.1.0",
+                        predictor_id="purple_stub_v0",
                     ),
                 )
             )
@@ -74,8 +150,21 @@ class PurpleAgent:
         self,
         events_path: Optional[Path] = None,
         output_path: Optional[Path] = None,
+        as_of: Optional[datetime] = None,
+        log: Optional[LogFn] = None,
     ) -> Path:
+        def log_step(message: str, color: str = "cyan") -> None:
+            if log:
+                log(message, color)
+
+        log_step("📥 Loading events...", "cyan")
         events = self.ingest_events(events_path)
-        predictions = self.predict(events)
+        log_step(f"   → Loaded {len(events)} events", "cyan")
+        log_step("🧠 Generating predictions...", "cyan")
+        predictions = self.predict(events, as_of=as_of, log=log_step)
+        log_step("   → Predictions computed", "cyan")
         target = output_path or self.config.default_output
-        return self.write_predictions(predictions, target)
+        log_step(f"💾 Writing output to {target}", "cyan")
+        result = self.write_predictions(predictions, target)
+        log_step("✅ Done", "green")
+        return result
