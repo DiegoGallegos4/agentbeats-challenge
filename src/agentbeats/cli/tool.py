@@ -30,8 +30,10 @@ def fetch_edgar(
     Notes:
       - Set SEC_USER_AGENT (e.g., agentbeats/0.1 (contact: you@example.com)) to avoid SEC blocks.
 
+    \b
     Examples:
-      agentbeats tool edgar --events-path data/generated/events/latest.jsonl --output-path data/generated/edgar/latest.jsonl
+      agentbeats tool edgar --events-path data/generated/events/latest.jsonl \\
+        --output-path data/generated/edgar/latest.jsonl
     """
     eloc = events_path or get_default_path("events")
     out = output_path or get_default_path("edgar")
@@ -80,8 +82,10 @@ def fetch_alpha(
     Notes:
       - Requires ALPHAVANTAGE_API_KEY in the environment.
 
+    \b
     Examples:
-      agentbeats tool alpha-vantage TSLA --function TIME_SERIES_DAILY --output-path data/generated/tool_cache/alpha_vantage/tsla_daily.json
+      agentbeats tool alpha-vantage TSLA --function TIME_SERIES_DAILY \\
+        --output-path data/generated/tool_cache/alpha_vantage/tsla_daily.json
     """
 
     client = AlphaVantageClient(

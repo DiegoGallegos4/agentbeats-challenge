@@ -24,12 +24,12 @@ def run_predictor(
     """
     Generate predictions using the stub purple agent.
 
+    \b
     Examples:
-      # Default paths (uses fixtures if missing)
-      agentbeats run predictor
-
-      # Explicit inputs with timestamp
-      agentbeats run predictor --events-path data/generated/events/latest.jsonl --as-of 2025-01-01T00:00:00Z
+      Default paths (uses fixtures if missing):
+        agentbeats run predictor
+      Explicit inputs with timestamp:
+        agentbeats run predictor --events-path data/generated/events/latest.jsonl --as-of 2025-01-01T00:00:00Z
     """
 
     config = PredictorConfig()
@@ -56,14 +56,14 @@ def run_evaluator(
     """
     Run the MVP evaluator on fixture or user-provided data.
 
+    \b
     Examples:
-      # Default paths (falls back to fixtures if missing)
-      agentbeats run evaluator
-
-      # Explicit paths
-      agentbeats run evaluator --predictions-path data/generated/predictions/latest.jsonl \\
-        --resolutions-path data/generated/resolutions/latest.jsonl \\
-        --events-path data/generated/events/latest.jsonl
+      Default paths (falls back to fixtures if missing):
+        agentbeats run evaluator
+      Explicit paths:
+        agentbeats run evaluator --predictions-path data/generated/predictions/latest.jsonl \\
+          --resolutions-path data/generated/resolutions/latest.jsonl \\
+          --events-path data/generated/events/latest.jsonl
     """
 
     config = EvaluatorConfig()
@@ -142,12 +142,12 @@ def run_pipeline(
       - Set ALPHAVANTAGE_API_KEY to enable price resolutions.
       - Set SEC_USER_AGENT to enable EDGAR fetches (used by other commands).
 
+    \b
     Examples:
-      # Full pipeline with fixtures
-      agentbeats run pipeline --source fixture --limit 5
-
-      # Skip ingest (reuse existing events) and skip resolve
-      agentbeats run pipeline --skip-ingest --skip-resolve --events-path data/generated/events/latest.jsonl
+      Full pipeline with fixtures:
+        agentbeats run pipeline --source fixture --limit 5
+      Skip ingest (reuse existing events) and skip resolve:
+        agentbeats run pipeline --skip-ingest --skip-resolve --events-path data/generated/events/latest.jsonl
     """
     # Ingest
     ev_path = events_path or get_default_path("events")

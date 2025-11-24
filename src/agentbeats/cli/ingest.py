@@ -12,10 +12,18 @@ ingest_app = typer.Typer(help="Ingestion commands (green agent)")
 
 @ingest_app.command("events")
 def ingest_events(
-    output_path: Optional[Path] = typer.Option(None, help="Where to write the event snapshot JSONL"),
-    source: str = typer.Option("polymarket", help="Ingestion source (polymarket or fixture)"),
-    limit: int = typer.Option(10, help="Number of events to fetch when source=polymarket"),
-    include_active: bool = typer.Option(True, help="Include active markets (polymarket)"),
+    output_path: Optional[Path] = typer.Option(
+        None, help="Where to write the event snapshot JSONL"
+    ),
+    source: str = typer.Option(
+        "polymarket", help="Ingestion source (polymarket or fixture)"
+    ),
+    limit: int = typer.Option(
+        10, help="Number of events to fetch when source=polymarket"
+    ),
+    include_active: bool = typer.Option(
+        True, help="Include active markets (polymarket)"
+    ),
     keywords: Optional[str] = typer.Option(
         None,
         help="Comma-separated keywords to filter events (defaults to finance keywords)",
@@ -24,12 +32,13 @@ def ingest_events(
     """
     Run the offline ingestion pipeline to snapshot event specs.
 
+    \b
     Examples:
-      # Polymarket source
-      agentbeats ingest events --source polymarket --limit 10
-
-      # Fixture source (offline)
-      agentbeats ingest events --source fixture --output-path data/generated/events/latest.jsonl
+      Polymarket source:
+        agentbeats ingest events --source polymarket --limit 10
+    \b
+      Fixture source (offline):
+        agentbeats ingest events --source fixture --output-path data/generated/events/latest.jsonl
     """
 
     keyword_list = None
