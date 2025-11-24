@@ -23,7 +23,7 @@ This document translates the requirements in `docs/research/research-spec.md` in
 - Baseline evaluator scoring Accuracy/Brier live via `agentbeats run-evaluator` with summary + per-event explanations.
 - Deliverable: end-to-end loop (ingest → predict → evaluate) operating on snapshots with docs/CLI support.
 
-### Phase 2 – Metrics & Data Pipeline Hardening (in progress)
+### Phase 2 – Metrics & Data Pipeline Hardening ✅ *completed*
 
 - Expand tools to include Alpha Vantage (with on-disk cache); log tool calls with provenance.
 - Persist structured run logs (`model × event × time`) for leaderboard and reproducibility.
@@ -32,10 +32,10 @@ This document translates the requirements in `docs/research/research-spec.md` in
 - Deliverable: evaluator run produces stored artifacts for every prediction cycle; defaults to Accuracy/Brier, awaiting real resolutions to close the phase.
 
 Phase 2 task breakdown:
-- [ ] Resolution fetchers: implement per-pattern resolvers (e.g., price close fetcher for ticker questions; manual/EPS fetcher stub for earnings-type questions) writing `ResolutionRecord` JSONL.
-- [ ] Resolution CLI: add a command to run resolution acquisition over an events file and persist to `data/generated/resolutions/latest.jsonl`.
-- [ ] Coverage check: add a simple validator that flags events without resolutions or missing provenance/timestamps.
-- [ ] Logging: ensure resolution runs write logs/artifacts to `data/generated/runs/` alongside evaluator runs.
+- [x] Resolution fetchers: implement per-pattern resolvers (price close via Alpha Vantage; EDGAR evidence fetcher) writing Resolution-like JSONL.
+- [x] Resolution CLI: commands to run price resolutions and generate placeholders (plus EDGAR evidence) with outputs under `data/generated/resolutions/` / `data/generated/edgar/`.
+- [x] Coverage check: add a simple validator that flags events without resolutions or missing provenance/timestamps (see `agentbeats status coverage`).
+- [x] Logging: evaluator runs persist artifacts to `data/generated/runs/`; tool logs/cache added for EDGAR/Alpha Vantage.
 
 ### Phase 3 – Evidence & Audit Agents
 

@@ -42,6 +42,7 @@ Scaffolding for the FutureBench-Finance evaluator (green agent) and predictor (p
 | `agentbeats tool edgar` | Fetch EDGAR filings + XBRL facts for events | `--events-path`, `--output-path`, `--forms`, `--fact-tags`, `--limit` | EDGAR evidence JSONL (`data/generated/edgar/latest.jsonl`) |
 | `agentbeats tool alpha-vantage` | Fetch Alpha Vantage time series (debug) | `symbol`, `--function`, `--output-path` | Raw Alpha Vantage JSON (also cached under `data/generated/tool_cache/alpha_vantage`) |
 | `agentbeats status show` | Show available data files and counts | *(no flags)* | Lists events/predictions/resolutions/edgar paths + run logs |
+| `agentbeats status coverage` | Check events vs resolutions coverage | `--events-path`, `--resolutions-path` | Counts missing/weak resolutions |
 
 > Note: `resolve prices` is the Alpha Vantage–backed resolver for price-close events; `tool alpha-vantage` is a debug helper to inspect raw time series.
 
