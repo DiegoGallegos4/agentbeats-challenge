@@ -96,7 +96,7 @@ class BaselineEvaluator:
         events_path: Optional[Path],
         metrics: Dict[str, Any],
         rows: List[Prediction],
-    ) -> None:
+    ) -> Path:
         """Write metrics + per-event records for reproducibility/debugging."""
         timestamp = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
         run_dir = self.run_log_dir / timestamp
@@ -127,6 +127,7 @@ class BaselineEvaluator:
         }
         with (run_dir / "inputs.json").open("w", encoding="utf-8") as handle:
             json.dump(metadata, handle, indent=2)
+        return run_dir
 
     def evaluate(
         self,
@@ -156,7 +157,8 @@ class BaselineEvaluator:
         metrics["summary"] = self._summary(serialized)
         explanations = self._build_explanations(merged, events_map, resolution_rows)
         metrics["explanations"] = explanations
-        self._persist_run(predictions_path, resolutions_path, events_path, metrics, merged)
+        run_dir = self._persist_run(predictions_path, resolutions_path, events_path, metrics, merged)
+        metrics["run_log_dir"] = str(run_dir)
         return metrics
 
     def _build_explanations(
