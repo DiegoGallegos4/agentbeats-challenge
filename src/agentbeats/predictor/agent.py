@@ -18,9 +18,10 @@ from ..models import (
     PredictionPayload,
     PredictionRecord,
 )
-from ..tools import AlphaVantageClient, NewsEvidenceFetcher
+from ..tools import AlphaVantageClient, EdgarEvidenceFetcher, NewsEvidenceFetcher
 from .evidence.alpha import AlphaVantageEvidenceModule
 from .evidence.base import EvidencePayload
+from .evidence.edgar import EdgarEvidenceModule
 from .evidence.news import NewsEvidenceModule
 
 T_Model = TypeVar("T_Model", bound=BaseModel)
@@ -46,12 +47,19 @@ class PurpleAgent:
             if self.config.alpha_vantage_api_key
             else None
         )
+        self.edgar_fetcher = EdgarEvidenceFetcher()
         self.evidence_modules = self._build_evidence_modules()
 
     def _build_evidence_modules(self):
         modules = [NewsEvidenceModule(self.news_fetcher)]
         if self.alpha_client and self.alpha_client.is_configured():
-            modules.append(AlphaVantageEvidenceModule(self.alpha_client, {k: (v["symbol"], v["type"]) for k, v in FINANCE_KEYWORDS.items()}))
+            modules.append(
+                AlphaVantageEvidenceModule(
+                    self.alpha_client,
+                    {k: (v["symbol"], v["type"]) for k, v in FINANCE_KEYWORDS.items()},
+                )
+            )
+        modules.append(EdgarEvidenceModule(self.edgar_fetcher))
         return modules
 
     def _load_jsonl(self, path: Path, model: Type[T_Model]) -> Iterable[T_Model]:
@@ -87,6 +95,8 @@ class PurpleAgent:
             logs.append(
                 f"{module.__class__.__name__}: {len(payload.evidence)} evidence item(s), signal {payload.signal:+.2f}"
             )
+            if payload.messages:
+                logs.extend([f"   {msg}" for msg in payload.messages])
         return evidence, sentiment, market_probability, logs
 
     def analyze_event(self, event: EventSpec, sentiment: float, evidence: List[EvidenceItem]) -> str:

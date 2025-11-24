@@ -12,13 +12,8 @@ from pydantic import BaseModel
 
 from ..config import EvaluatorConfig
 from ..models import EventSpec, PredictionRecord, ResolutionRecord
-from .metrics import (
-    accuracy as metric_accuracy,
-    brier_score,
-    calibration_bins,
-    els_information_ratio,
-    kelly_metrics,
-)
+from .metrics import accuracy as metric_accuracy
+from .metrics import brier_score
 
 T_Model = TypeVar("T_Model", bound=BaseModel)
 
@@ -158,8 +153,40 @@ class BaselineEvaluator:
             "accuracy": metric_accuracy(serialized),
             "brier": brier_score(serialized),
         }
-        metrics.update(els_information_ratio(serialized))
-        metrics.update(kelly_metrics(serialized))
-        metrics["calibration"] = calibration_bins(serialized)
+        metrics["summary"] = self._summary(serialized)
+        explanations = self._build_explanations(merged, events_map, resolution_rows)
+        metrics["explanations"] = explanations
         self._persist_run(predictions_path, resolutions_path, events_path, metrics, merged)
         return metrics
+
+    def _build_explanations(
+        self,
+        rows: List[Prediction],
+        events_map: Dict[str, EventSpec],
+        resolutions: Dict[str, int],
+    ) -> List[Dict[str, Any]]:
+        details: List[Dict[str, Any]] = []
+        for row in rows:
+            event = events_map.get(row.event_id)
+            details.append(
+                {
+                    "event_id": row.event_id,
+                    "question": event.question if event else None,
+                    "predicted_prob": row.probability,
+                    "outcome": row.outcome,
+                    "accuracy_hit": int(round(row.probability) == row.outcome),
+                    "brier_component": (row.probability - row.outcome) ** 2,
+                }
+            )
+        return details
+
+    def _summary(self, rows: List[Dict[str, Any]]) -> str:
+        total = len(rows)
+        hits = sum(1 for row in rows if round(row["probability"]) == row["outcome"])
+        brier_terms = [(row["probability"] - row["outcome"]) ** 2 for row in rows]
+        avg_brier = sum(brier_terms) / total if total else 0.0
+        acc_pct = (hits / total * 100) if total else 0.0
+        return (
+            f"Evaluated {total} events: accuracy = {hits}/{total} ({acc_pct:.1f}%). "
+            f"Brier score (mean squared error) = {avg_brier:.4f} (lower is better)."
+        )

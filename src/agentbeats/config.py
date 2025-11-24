@@ -38,3 +38,4 @@ class PredictorConfig(BaseModel):
     default_output: Path = Field(default=Path("data/generated/predictions/latest.jsonl"))
     tool_log_dir: Path = Field(default=Path("data/generated/tool_logs"))
     alpha_vantage_api_key: Optional[str] = Field(default_factory=lambda: os.getenv("ALPHAVANTAGE_API_KEY"))
+    alpha_vantage_cache_dir: Path = Field(default=Path("data/generated/tool_cache/alpha_vantage"))

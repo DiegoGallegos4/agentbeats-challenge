@@ -13,6 +13,7 @@ class EvidencePayload:
     evidence: List[EvidenceItem]
     signal: float
     market_probability: Optional[float] = None
+    messages: List[str] = None
 
 
 class EvidenceModule(Protocol):

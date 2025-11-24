@@ -27,10 +27,10 @@ class AlphaVantageEvidenceModule:
 
     def gather(self, event: EventSpec) -> EvidencePayload:
         if not self.client or not self.client.is_configured():
-            return EvidencePayload(evidence=[], signal=0.0)
+            return EvidencePayload(evidence=[], signal=0.0, messages=["Alpha Vantage skipped: no API key"])
         symbol = self._symbol_for_event(event)
         if not symbol:
-            return EvidencePayload(evidence=[], signal=0.0)
+            return EvidencePayload(evidence=[], signal=0.0, messages=["Alpha Vantage skipped: no symbol match"])
         try:
             series = self.client.fetch_time_series(symbol)
             key = "Time Series (Daily)"
@@ -38,7 +38,7 @@ class AlphaVantageEvidenceModule:
             ordered_dates = sorted(points.keys(), reverse=True)
             closes = [float(points[date]["4. close"]) for date in ordered_dates[:5]]
             if len(closes) < 2:
-                return EvidencePayload(evidence=[], signal=0.0)
+                return EvidencePayload(evidence=[], signal=0.0, messages=["Alpha Vantage skipped: insufficient data"])
             latest = closes[0]
             avg = sum(closes[1:]) / (len(closes) - 1)
             delta = (latest - avg) / avg if avg else 0.0
@@ -48,6 +48,9 @@ class AlphaVantageEvidenceModule:
                 snippet=f"{symbol} close {latest:.2f} ({delta:+.2%} vs 4-day avg)",
                 timestamp=datetime.now(timezone.utc),
             )
-            return EvidencePayload(evidence=[evidence], signal=delta)
-        except Exception:
-            return EvidencePayload(evidence=[], signal=0.0)
+            msg = "Alpha Vantage OK"
+            if getattr(self.client, "last_from_cache", False):
+                msg += " (cache)"
+            return EvidencePayload(evidence=[evidence], signal=delta, messages=[msg])
+        except Exception as exc:
+            return EvidencePayload(evidence=[], signal=0.0, messages=[f"Alpha Vantage error: {exc}"])

@@ -18,17 +18,24 @@ This document translates the requirements in `docs/research/research-spec.md` in
 
 ### Phase 1 – Environment & Baseline Scoring ✅ *completed*
 
-- Stand up ingestion CLI + automation hooks that publish `EventSpec` snapshots from curated sources.
-- Provide reference tool adapters (news fixture now) and a purple-agent interface so predictors can connect.
-- Implement Baseline evaluator scoring Accuracy/Brier, expose CLI/API (`agentbeats run-evaluator`).
-- Deliverable: end-to-end loop (ingest → predict → evaluate) operating on fixtures with documentation on how to run agents.
+- Ingestion CLI + automation hooks publishing `EventSpec` snapshots (fixtures + Polymarket feed).
+- Reference tool adapters (live news, optional Alpha Vantage) and purple-agent interface.
+- Baseline evaluator scoring Accuracy/Brier live via `agentbeats run-evaluator` with summary + per-event explanations.
+- Deliverable: end-to-end loop (ingest → predict → evaluate) operating on snapshots with docs/CLI support.
 
-### Phase 2 – Metrics & Data Pipeline Hardening
+### Phase 2 – Metrics & Data Pipeline Hardening (in progress)
 
-- Expand tools to include Alpha Vantage + Polymarket data extraction; log all tool calls with provenance.
+- Expand tools to include Alpha Vantage (with on-disk cache); log tool calls with provenance.
 - Persist structured run logs (`model × event × time`) for leaderboard and reproducibility.
-- Add market-aware metrics (ELS, Information Ratio), calibration curves, Kelly PnL simulations.
-- Deliverable: evaluator run produces comprehensive metric bundle + stored artifacts for every prediction cycle.
+- Optional metrics (ELS/Information Ratio, calibration, Kelly) skipped by default without a baseline; primary metrics remain Accuracy/Brier.
+- Resolutions pipeline: `agentbeats generate-resolutions` creates placeholder `ResolutionRecord` JSONL from any event snapshot for downstream scoring.
+- Deliverable: evaluator run produces stored artifacts for every prediction cycle; defaults to Accuracy/Brier, awaiting real resolutions to close the phase.
+
+Phase 2 task breakdown:
+- [ ] Resolution fetchers: implement per-pattern resolvers (e.g., price close fetcher for ticker questions; manual/EPS fetcher stub for earnings-type questions) writing `ResolutionRecord` JSONL.
+- [ ] Resolution CLI: add a command to run resolution acquisition over an events file and persist to `data/generated/resolutions/latest.jsonl`.
+- [ ] Coverage check: add a simple validator that flags events without resolutions or missing provenance/timestamps.
+- [ ] Logging: ensure resolution runs write logs/artifacts to `data/generated/runs/` alongside evaluator runs.
 
 ### Phase 3 – Evidence & Audit Agents
 
@@ -52,11 +59,16 @@ This document translates the requirements in `docs/research/research-spec.md` in
 ## Scoring & Metrics Roadmap
 
 - **Phase 1 (done):** Accuracy + Brier computed from prediction/resolution JSONL via `agentbeats run-evaluator`.
-- **Phase 2:** Add Excess Log Score, Information Ratio, calibration curves, Kelly PnL; persist structured logs for reproducibility.
+- **Phase 2 (in progress):** Accuracy + Brier are the primary metrics. Optional metrics (ELS/Information Ratio, calibration, Kelly) are skipped unless a baseline probability is present.
 - **Phase 3:** Evidence Coverage, Attribution Precision, Reasoning Trace Quality, leakage/contamination checks powered by audit agents.
 - **Phase 4:** Automated dashboards/leaderboards summarizing all metrics and surfacing reliability/QA alerts.
 
+## Resolution Pipeline (Phase 2 Close-out)
+
+- Use `agentbeats generate-resolutions` (or `scripts/generate_resolutions.py`) to create placeholder `ResolutionRecord` JSONL from any event snapshot; edit outcomes/values as truth arrives.
+- Wire resolution acquisition (manual/scripted) for watchlist/live events so scoring is unblocked without fixtures.
+
 ## Next Steps
 
-1. Close Phase 0 by confirming benchmark definition + architecture docs with stakeholders.
-2. Execute Phase 1 deliverables: ingestion snapshot automation, tool interface stubs, Baseline evaluator CLI.
+1. Finalize the resolution pipeline and mark Phase 2 complete with Accuracy/Brier as defaults.
+2. Keep optional metrics disabled unless a baseline is provided; treat them as Phase 3+ enhancements.

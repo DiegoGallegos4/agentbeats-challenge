@@ -19,4 +19,5 @@ class NewsEvidenceModule:
         articles = self.fetcher.fetch_articles(event)
         evidence = [self.fetcher.to_evidence(article) for article in articles]
         sentiment = self.fetcher.aggregate_sentiment(articles)
-        return EvidencePayload(evidence=evidence, signal=sentiment)
+        message = f"News: {len(evidence)} article(s)"
+        return EvidencePayload(evidence=evidence, signal=sentiment, messages=[message])

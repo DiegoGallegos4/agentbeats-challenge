@@ -11,7 +11,7 @@ from ..models import EventSpec
 
 
 def accuracy(rows: List[Dict[str, Any]]) -> float:
-    """Fraction of predictions whose rounded probability matches the outcome."""
+    """Fraction of predictions whose rounded probability matches the outcome: mean(1 if round(p)==y else 0)."""
     if not rows:
         return 0.0
     correct = sum(1 for row in rows if round(row["probability"]) == row["outcome"])
@@ -19,18 +19,26 @@ def accuracy(rows: List[Dict[str, Any]]) -> float:
 
 
 def brier_score(rows: List[Dict[str, Any]]) -> float:
-    """Mean squared error between probabilities and outcomes."""
+    """Mean squared error between probabilities and outcomes: mean((p - y)^2)."""
     if not rows:
         return 0.0
     return sum((row["probability"] - row["outcome"]) ** 2 for row in rows) / len(rows)
 
 
 def els_information_ratio(rows: List[Dict[str, Any]]) -> Dict[str, float]:
-    """Compute Excess Log Score and Information Ratio vs market baseline."""
+    """Compute Excess Log Score (ELS) and Information Ratio vs a market/baseline probability.
+
+    Per-event ELS:
+      y=1 → log(p) - log(m)
+      y=0 → log(1-p) - log(1-m)
+    Report mean(els_i) and information_ratio = mean(els_i)/std(els_i).
+    """
     values: List[float] = []
     for row in rows:
         market_prob = row.get("market_probability")
-        if market_prob is None or market_prob <= 0 or market_prob >= 1:
+        if market_prob is None:
+            continue
+        if market_prob <= 0 or market_prob >= 1:
             continue
         prob = min(max(row["probability"], 1e-6), 1 - 1e-6)
         market_prob = min(max(market_prob, 1e-6), 1 - 1e-6)
@@ -48,7 +56,11 @@ def els_information_ratio(rows: List[Dict[str, Any]]) -> Dict[str, float]:
 
 
 def kelly_metrics(rows: List[Dict[str, Any]]) -> Dict[str, float]:
-    """Simulate Kelly-type PnL by comparing predictions to market baselines."""
+    """Simulate a simple Kelly-style PnL vs baseline markets.
+
+    stake = clamp(p - m, [-1, 1]); pnl_i = stake * (y - m)
+    Report Kelly PnL = mean(pnl_i) and Kelly Sharpe = mean/ std(pnl_i).
+    """
     pnl_values: List[float] = []
     for row in rows:
         market_prob = row.get("market_probability")
