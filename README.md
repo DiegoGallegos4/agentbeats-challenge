@@ -36,6 +36,7 @@ Scaffolding for the FutureBench-Finance evaluator (green agent) and predictor (p
 | `agentbeats ingest events` | Snapshot events from Polymarket/fixtures | `--source`, `--limit`, `--include-active`, `--keywords`, `--output-path` | Events JSONL (`data/generated/events/latest.jsonl` by default) |
 | `agentbeats run predictor` | Generate stub purple predictions | `--events-path`, `--output-path`, `--as-of` | Predictions JSONL (`data/generated/predictions/latest.jsonl`) |
 | `agentbeats run evaluator` | Score predictions vs resolutions | `--predictions-path`, `--resolutions-path`, `--events-path` | Metrics summary + per-event details |
+| `agentbeats run pipeline` | End-to-end ingest → predict → resolve-prices → evaluate | `--source`, `--limit`, `--as-of`, `--skip-ingest`, `--skip-resolve`, path overrides | Runs full pipeline, writes artifacts |
 | `agentbeats resolve placeholders` | Create placeholder resolutions to edit | `--events-path`, `--output-path` | Resolutions JSONL (defaults to `data/generated/resolutions/latest.jsonl`) |
 | `agentbeats resolve prices` | Resolve “close above $X on DATE” via Alpha Vantage | `--events-path`, `--output-path` | Resolutions JSONL with price outcomes |
 | `agentbeats tool edgar` | Fetch EDGAR filings + XBRL facts for events | `--events-path`, `--output-path`, `--forms`, `--fact-tags`, `--limit` | EDGAR evidence JSONL (`data/generated/edgar/latest.jsonl`) |
@@ -112,5 +113,10 @@ sequenceDiagram
 - **Green agent (evaluator)**: Scores predictions against resolutions (Accuracy, Brier) and manages evidence/audit pipelines.
 - **Tool adapters**: Shared external data fetchers (news, Alpha Vantage, EDGAR, Polymarket) used by predictors/resolvers.
 - **Run artifacts**: Evaluation outputs stored under `data/generated/runs/<timestamp>/` (metrics, per-event records, inputs).
+
+## Adding new CLI commands (workflow)
+1. Add the command to the CLI (grouped under `ingest`, `run`, `resolve`, `tool`, or `status`).
+2. Document the command in `README.md` (commands table, workflows/examples).
+3. Include usage examples and required env vars in the command docstring/help so `--help` is informative.
 
 See `docs/green-agent/plan.md` and `docs/purple-agent/responsibilities.md` for the roadmap and predictor contract, and `docs/tools/README.md` for shared tool interfaces.

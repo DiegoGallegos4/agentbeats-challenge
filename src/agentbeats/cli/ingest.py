@@ -25,7 +25,10 @@ def ingest_events(
     Run the offline ingestion pipeline to snapshot event specs.
 
     Examples:
+      # Polymarket source
       agentbeats ingest events --source polymarket --limit 10
+
+      # Fixture source (offline)
       agentbeats ingest events --source fixture --output-path data/generated/events/latest.jsonl
     """
 

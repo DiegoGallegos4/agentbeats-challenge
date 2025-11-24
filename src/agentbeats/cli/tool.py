@@ -26,6 +26,12 @@ def fetch_edgar(
 
     Output rows look like:
     {"id": "...", "filings": [...EvidenceItem...], "facts": [...fact dicts...]}
+
+    Notes:
+      - Set SEC_USER_AGENT (e.g., agentbeats/0.1 (contact: you@example.com)) to avoid SEC blocks.
+
+    Examples:
+      agentbeats tool edgar --events-path data/generated/events/latest.jsonl --output-path data/generated/edgar/latest.jsonl
     """
     eloc = events_path or get_default_path("events")
     out = output_path or get_default_path("edgar")
@@ -68,7 +74,15 @@ def fetch_alpha(
         None, help="Optional path to write the raw JSON response (defaults to cache location)"
     ),
 ):
-    """Fetch Alpha Vantage time series for debugging (uses cache if present)."""
+    """
+    Fetch Alpha Vantage time series for debugging (uses cache if present).
+
+    Notes:
+      - Requires ALPHAVANTAGE_API_KEY in the environment.
+
+    Examples:
+      agentbeats tool alpha-vantage TSLA --function TIME_SERIES_DAILY --output-path data/generated/tool_cache/alpha_vantage/tsla_daily.json
+    """
 
     client = AlphaVantageClient(
         cache_dir=Path("data/generated/tool_cache/alpha_vantage"),

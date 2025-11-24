@@ -22,6 +22,9 @@ def generate_resolutions(
     """
     Produce placeholder ResolutionRecord JSONL from an events file.
     Outcomes default to 0; edit the output to set true outcomes/values.
+
+    Examples:
+      agentbeats resolve placeholders --events-path data/generated/events/latest.jsonl --output-path data/generated/resolutions/latest.jsonl
     """
     eloc = events_path or get_default_path("events")
     out = output_path or get_default_path("resolutions")
@@ -58,7 +61,15 @@ def resolve_prices(
     events_path: Optional[Path] = typer.Option(None, help="Events JSONL to resolve price-close questions"),
     output_path: Optional[Path] = typer.Option(None, help="Where to write ResolutionRecord JSONL"),
 ):
-    """Resolve 'close above $X on DATE' events via Alpha Vantage (uses cache when available)."""
+    """
+    Resolve 'close above $X on DATE' events via Alpha Vantage (uses cache when available).
+
+    Notes:
+      - Requires ALPHAVANTAGE_API_KEY in the environment.
+
+    Examples:
+      agentbeats resolve prices --events-path data/generated/events/latest.jsonl --output-path data/generated/resolutions/latest.jsonl
+    """
 
     cfg = PredictorConfig()
     if not cfg.alpha_vantage_api_key:
