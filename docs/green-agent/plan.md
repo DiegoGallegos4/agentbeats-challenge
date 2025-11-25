@@ -44,6 +44,13 @@ Phase 2 task breakdown:
 - Provide audit reports + alerts that feed back into ingestion/predictor agents.
 - Deliverable: evaluator outputs quantitative scores plus qualitative evidence audits per event.
 
+Phase 3 task breakdown:
+- [ ] Evidence validation agent (LLM, LangChain, single-agent) to re-fetch/validate cited EDGAR facts and news snippets for EC/AP checks.
+- [ ] Reusable LLM provider for purple agent (shared across tools/modules).
+- [ ] Reasoning strategy pattern for purple agent (ReAct, Plan-and-Solve, ReWOO selectable).
+- [ ] Reporting: per-event audit summaries (EC/AP/RTQ placeholders) in run artifacts.
+- [ ] CLI/Docs: expose audit/evidence validation commands and document expected outputs.
+
 ### Phase 4 – Automation & Release
 
 - Automate the full AAA loop: scheduled ingestion, predictor orchestration (A2A/MCP endpoints), resolution fetching, scoring, dashboards.
