@@ -1,0 +1,99 @@
+# Multi-Agent Stock Analysis & Portfolio Manager
+
+This project implements a multi-agent system for stock analysis and portfolio management using LangGraph, Alpha Vantage data, and local storage. It employs various agents (Market, News, Insider, Options, Analyst, Web, Quantitative) to analyze stocks and generate a balanced portfolio.
+
+## 📂 Data Directory Structure
+
+The system relies on a specific local directory structure to store downloaded data and avoid API rate limits.
+
+**Root Data Directory:** `/Volumes/ExtremePro/AV_data/` (Configurable in `data_manager.py`)
+
+```text
+/Volumes/ExtremePro/AV_data/
+├── YYYY-MM-DD/              # Dated subdirectories for historical snapshots
+│   ├── market/              # Daily OHLCV CSVs ({ticker}.csv)
+│   ├── news/                # News sentiment JSONs ({ticker}.json)
+│   ├── insider/             # Insider transaction CSVs ({ticker}.csv)
+│   ├── options/             # Options chain JSONs ({ticker}.json)
+│   └── analyst/             # Analyst ratings CSVs ({ticker}.csv)
+└── models/                  # Trained quantitative models
+    └── linear/              # Ridge regression models ({ticker}.joblib)
+```
+
+**PnL Data Directory:** `./pnl_data/` (Relative to project root)
+
+```text
+pnl_data/
+├── weights/                 # Generated portfolio weights
+│   └── YYYY-MM-DD.csv
+└── pnl/                     # Calculated Daily PnL
+    └── YYYY-MM-DD.csv
+```
+
+## 🚀 Setup
+
+1.  **Environment Variables**: Create a `.env` file in the project root:
+    ```env
+    ALPHA_VANTAGE_API_KEY=your_av_key
+    OPENAI_API_KEY=your_openai_key
+    TAVILY_API_KEY=your_tavily_key
+    ```
+
+2.  **Dependencies**:
+    ```bash
+    pip install pandas numpy langchain langgraph langchain-openai alpha_vantage ta joblib beautifulsoup4 tavily-python python-dotenv
+    ```
+
+## 🛠 Usage
+
+### 1. Download Data
+Always download data first for the target date to ensure local availability.
+```bash
+# Download for specific tickers
+python portfolio_manager.py --date 2025-12-22 --download --tickers AAPL,MSFT,TSLA
+
+# Download for a predefined subset
+python portfolio_manager.py --date 2025-12-22 --download --tickers subset
+
+# Download for all S&P 500 (Warning: Takes time)
+python portfolio_manager.py --date 2025-12-22 --download --tickers all
+```
+
+### 2. Run Analysis
+Runs the multi-agent system on the downloaded data to generate portfolio weights.
+```bash
+python portfolio_manager.py --date 2025-12-22 --tickers subset
+```
+*Output:* Saves weights to `pnl_data/weights/2025-12-22.csv`.
+
+### 3. Calculate PnL (Profit and Loss)
+To calculate PnL, you need weights from a previous date and market data for the current date.
+
+**Full Run (Analysis + PnL):**
+```bash
+python portfolio_manager.py --date 2025-12-22 --pnl_date 2025-12-23 --tickers subset
+```
+
+**PnL Only (Skip Analysis):**
+Useful if you already ran the analysis and just want to compute returns.
+*Prerequisite:* Data must be downloaded for **both** dates.
+```bash
+python portfolio_manager.py --date 2025-12-22 --pnl_date 2025-12-23 --pnl_only
+```
+
+### 4. Automated Daily Run (Cron)
+Use the provided shell script `run_daily_portfolio.sh` to run the job daily with the current date.
+
+**Crontab Entry (Mon-Fri at 16:00):**
+```cron
+0 16 * * 1-5 /Users/raghuramkowdeed/Documents/alphavantage/run_daily_portfolio.sh
+```
+
+## 🧩 Architecture
+
+*   **`portfolio_manager.py`**: Main entry point. Handles arguments, orchestration, and PnL tracking.
+*   **`data_manager.py`**: Centralized handler for reading/writing local data in dated directories.
+*   **`graph.py`**: Defines the LangGraph workflow and agent nodes.
+*   **`agents.py`**: Defines the system prompts and configuration for each agent.
+*   **`tools.py`**: LangChain tools used by agents (Market Data, Tavily Search, Website Scraper, etc.).
+*   **`realtime_prediction.py`**: Quantitative agent's logic for feature engineering and model prediction.

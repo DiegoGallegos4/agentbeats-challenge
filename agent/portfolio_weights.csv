@@ -1,0 +1,6 @@
+ticker,avg_score,details,centered_score,weight
+AAPL,0.0,"{'analyst': 0.0, 'insider': 0.0, 'market': 0.0, 'news': 0.0, 'options': 0.0, 'quant': 0.0, 'web': 0.0, 'website': 0.0}",0.0,0.0
+MSFT,0.0,"{'analyst': 0.0, 'insider': 0.0, 'market': 0.0, 'news': 0.0, 'options': 0.0, 'quant': 0.0, 'web': 0.0, 'website': 0.0}",0.0,0.0
+GOOGL,0.0,"{'analyst': 0.0, 'insider': 0.0, 'market': 0.0, 'news': 0.0, 'options': 0.0, 'quant': 0.0, 'web': 0.0, 'website': 0.0}",0.0,0.0
+AMZN,0.0,"{'analyst': 0.0, 'insider': 0.0, 'market': 0.0, 'news': 0.0, 'options': 0.0, 'quant': 0.0, 'web': 0.0, 'website': 0.0}",0.0,0.0
+TSLA,0.0,"{'analyst': 0.0, 'insider': 0.0, 'market': 0.0, 'news': 0.0, 'options': 0.0, 'quant': 0.0, 'web': 0.0, 'website': 0.0}",0.0,0.0
