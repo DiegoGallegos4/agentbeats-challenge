@@ -17,7 +17,8 @@ def save_portfolio_weights(date_str: str, portfolio_df: pd.DataFrame):
     Expected columns in portfolio_df: ['ticker', 'weight']
     """
     file_path = os.path.join(WEIGHTS_DIR, f"{date_str}.csv")
-    portfolio_df[['ticker', 'weight']].to_csv(file_path, index=False)
+    # Save all columns to preserve agent scores
+    portfolio_df.to_csv(file_path, index=False)
     print(f"Saved weights for {date_str} to {file_path}")
 
 def calculate_pnl(prev_date_str: str, current_date_str: str):
@@ -81,12 +82,61 @@ def calculate_pnl(prev_date_str: str, current_date_str: str):
         
     pnl_df = pd.DataFrame(results)
     
+    # Calculate PnL by Score Type (Agent)
+    # Identify agent columns (exclude standard columns)
+    excluded_cols = ['ticker', 'weight', 'avg_score', 'centered_score', 'return', 'pnl', 'price_prev', 'price_curr', 'note']
+    agent_cols = [c for c in weights_df.columns if c not in excluded_cols and pd.api.types.is_numeric_dtype(weights_df[c])]
+    
+    agent_pnl_summary = {}
+    
+    if agent_cols:
+        print("\n--- PnL by Agent (Hypothetical) ---")
+        for agent in agent_cols:
+            # 1. Get scores for this agent
+            scores = weights_df.set_index('ticker')[agent]
+            
+            # 2. Normalize to get weights (Market Neutral, Full Investment)
+            # Same logic as portfolio_manager.py
+            mean_score = scores.mean()
+            centered_scores = scores - mean_score
+            abs_sum = centered_scores.abs().sum()
+            
+            if abs_sum == 0:
+                agent_weights = centered_scores * 0
+            else:
+                agent_weights = centered_scores / abs_sum
+            
+            # 3. Calculate PnL for this agent
+            # Map weights to returns
+            # pnl_df has 'ticker' and 'return'
+            # We need to align agent_weights with pnl_df returns
+            
+            agent_pnl = 0.0
+            for _, row in pnl_df.iterrows():
+                ticker = row['ticker']
+                ret = row.get('return', 0.0)
+                if ticker in agent_weights:
+                    w = agent_weights[ticker]
+                    agent_pnl += w * ret
+            
+            agent_pnl_summary[agent] = agent_pnl
+            print(f"{agent}: {agent_pnl:.6f}")
+            
+            # Add agent pnl contribution to pnl_df for detailed view? 
+            # No, strictly speaking 'pnl' column is the actual portfolio pnl.
+            # We can add 'agent_weight' columns if needed, but summary is probably enough.
+
     # Save PnL
     pnl_path = os.path.join(PNL_DIR, f"{current_date_str}.csv")
     pnl_df.to_csv(pnl_path, index=False)
     
+    # Print PnL by Ticker
+    print("\n--- PnL by Ticker ---")
+    print(pnl_df[['ticker', 'weight', 'return', 'pnl']].to_string(index=False, float_format=lambda x: "{:.6f}".format(x)))
+
     total_pnl = pnl_df['pnl'].sum()
-    print(f"Total PnL for {current_date_str}: {total_pnl:.6f}")
+    print(f"-----------------------------------")
+    print(f"Total Portfolio PnL: {total_pnl:.6f}")
     print(f"Saved PnL details to {pnl_path}")
     
     return pnl_df

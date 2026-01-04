@@ -52,22 +52,35 @@ def build_portfolio(tickers, date=None):
             results.append({
                 'ticker': ticker,
                 'avg_score': avg_score,
-                'details': scores
+                'details': scores,
+                'analyses': state['analyses']
             })
         
-        # Rate Limiting: Sleep removed as we are using local data now.
-        # if i < len(tickers) - 1:
-        #     print("Sleeping for 12 seconds to respect rate limits...")
-        #     time.sleep(12)
-            
     if not results:
         return pd.DataFrame()
+        
+    # Save Traces (Analyses)
+    if date:
+        import json
+        import os
+        traces_dir = "pnl_data/traces"
+        os.makedirs(traces_dir, exist_ok=True)
+        traces_path = os.path.join(traces_dir, f"{date}.json")
+        
+        # Create a dict keyed by ticker
+        traces = {r['ticker']: r['analyses'] for r in results}
+        
+        with open(traces_path, 'w') as f:
+            json.dump(traces, f, indent=2)
+        print(f"Saved agent traces to {traces_path}")
         
     df = pd.DataFrame(results)
     
     # Unpack 'details' into separate columns
+    # Unpack 'details' into separate columns
     details_df = df['details'].apply(pd.Series)
-    df = pd.concat([df.drop(['details'], axis=1), details_df], axis=1)
+    # Drop 'details' and 'analyses' (we don't want full text in CSV)
+    df = pd.concat([df.drop(['details', 'analyses'], axis=1), details_df], axis=1)
     
     # Weight Optimization
     # Market Neutral: Sum(w) = 0

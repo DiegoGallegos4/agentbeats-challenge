@@ -50,7 +50,8 @@ def download_all_data(tickers, target_date_str):
             df.to_csv(csv_path, index=False)
         
         # 2. News Data
-        news_start = end_dt - timedelta(days=0)
+        # Fetch 7 days of news for context
+        news_start = end_dt - timedelta(days=7)
         news_items = avd.get_news_for_date_range(ticker, news_start.strftime('%Y-%m-%d'), target_date_str)
         if news_items:
             json_path = os.path.join(dirs['news'], f"{ticker}.json")
@@ -101,7 +102,15 @@ def read_local_news(ticker, target_date_str):
     json_path = os.path.join(dirs['news'], f"{ticker}.json")
     if os.path.exists(json_path):
         with open(json_path, 'r') as f:
-            return json.load(f)
+            data = json.load(f)
+            
+        if target_date_str:
+            # Filter by time_published <= target_date_str (end of day)
+            # time_published format: "20251222T153000"
+            target_dt_str = target_date_str.replace("-", "") + "T235959"
+            data = [item for item in data if item.get('time_published', '99999999T999999') <= target_dt_str]
+            
+        return data
     return []
 
 def read_local_insider(ticker, target_date_str):

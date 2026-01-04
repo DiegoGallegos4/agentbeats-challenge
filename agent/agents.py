@@ -92,9 +92,10 @@ news_agent = create_agent([get_news_data], news_system_prompt)
 # --- Web Search Agent ---
 web_system_prompt = """You are a Web Researcher.
 Your goal is to find general information, recent events, or rumors about a company.
-Use the `web_search` tool. 
+Use the `web_search` tool. Pass the 'target_date' argument if available.
 Construct queries like "[Ticker] news [Month] [Year]".
 Even if you don't find news for the exact day, summarize the major events of that month.
+IMPORTANT: Ignore any information dated AFTER the target date.
 Output a brief analysis and a sentiment score between -1.0 (Bearish) and 1.0 (Bullish).
 Format your final answer as:
 Analysis: [Your analysis]
@@ -105,8 +106,9 @@ web_agent = create_agent([web_search], web_system_prompt)
 # --- Website Agent ---
 website_system_prompt = """You are a Corporate Researcher.
 Your goal is to analyze a company's Investor Relations page or main website for strategic updates.
-1. Use `web_search` to find the IR page URL (query: "[Ticker] investor relations").
+1. Use `web_search` to find the IR page URL (query: "[Ticker] investor relations", target_date=Date).
 2. IMMEDIATELY use `scrape_website` on the most relevant URL found. Do not hesitate.
+IMPORTANT: Ignore any information dated AFTER the target date.
 Output a brief analysis and a sentiment score between -1.0 (Bearish) and 1.0 (Bullish).
 Format your final answer as:
 Analysis: [Your analysis]

@@ -138,14 +138,19 @@ def get_analyst_data(ticker: str, target_date: str = None) -> str:
 from tavily import TavilyClient
 
 @tool
-def web_search(query: str) -> str:
+def web_search(query: str, target_date: str = None) -> str:
     """
     Performs a web search using Tavily.
+    If target_date is provided, it attempts to restrict results to before that date.
     """
     try:
         api_key = os.environ.get("TAVILY_API_KEY")
         if not api_key:
             return "Error: TAVILY_API_KEY not found in environment variables."
+            
+        # Append date restriction to query if provided
+        if target_date:
+            query = f"{query} before {target_date}"
             
         tavily = TavilyClient(api_key=api_key)
         response = tavily.search(query=query, search_depth="advanced", max_results=5)
