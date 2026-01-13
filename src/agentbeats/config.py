@@ -1,11 +1,11 @@
 """Shared configuration models for AgentBeats scaffolding."""
 
-import os
 from pathlib import Path
 from typing import List, Optional
 
 from pydantic import BaseModel, Field
 
+from .config_loader import CONFIG_PATH, get_config_value
 from .domain.finance import FINANCE_KEYWORDS
 
 
@@ -37,5 +37,40 @@ class PredictorConfig(BaseModel):
     fixture_predictions: Path = Field(default=Path("data/fixtures/predictions/sample_predictions.jsonl"))
     default_output: Path = Field(default=Path("data/generated/predictions/latest.jsonl"))
     tool_log_dir: Path = Field(default=Path("data/generated/tool_logs"))
-    alpha_vantage_api_key: Optional[str] = Field(default_factory=lambda: os.getenv("ALPHAVANTAGE_API_KEY"))
-    alpha_vantage_cache_dir: Path = Field(default=Path("data/generated/tool_cache/alpha_vantage"))
+    alpha_vantage_api_key: Optional[str] = Field(
+        default_factory=lambda: get_config_value(["tools", "alpha_vantage", "api_key"], env_fallback="ALPHAVANTAGE_API_KEY")
+    )
+    alpha_vantage_cache_dir: Path = Field(
+        default_factory=lambda: Path(
+            get_config_value(
+                ["tools", "alpha_vantage", "cache_dir"],
+                default="data/generated/tool_cache/alpha_vantage",
+            )
+        )
+    )
+    edgar_user_agent: str = Field(
+        default_factory=lambda: get_config_value(
+            ["tools", "edgar", "user_agent"],
+            default="agentbeats/0.1 (contact: your-email@example.com)",
+            env_fallback="SEC_USER_AGENT",
+        )
+    )
+    edgar_cache_dir: Path = Field(
+        default_factory=lambda: Path(
+            get_config_value(
+                ["tools", "edgar", "cache_dir"],
+                default="data/generated/tool_cache/edgar",
+            )
+        )
+    )
+
+class LLMConfig(BaseModel):
+    provider: str = Field(default_factory=lambda: get_config_value(["llm", "provider"], default="ollama"))
+    model: str = Field(default_factory=lambda: get_config_value(["llm", "model"], default="llama3"))
+    endpoint: str = Field(default_factory=lambda: get_config_value(["llm", "endpoint"], default="http://localhost:11434"))
+    temperature: float = Field(default_factory=lambda: float(get_config_value(["llm", "temperature"], default=0.0)))
+
+
+def config_path() -> Path:
+    """Expose the resolved config path for messaging."""
+    return CONFIG_PATH

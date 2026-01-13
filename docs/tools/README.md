@@ -5,6 +5,11 @@ Tools are shared capabilities accessed by both assessor (green) and predictor (p
 - **Outputs:** structured data with timestamps, provenance URLs, and any confidence scores.
 - **Usage:** how the purple agent calls it during reasoning, and how the green agent may replay/validate the call.
 
+## Config
+
+- Primary configuration lives in `config/agentbeats.toml` (see `config/agentbeats.example.toml`).
+- Tool credentials should be set in TOML first (e.g., `tools.alpha_vantage.api_key`, `tools.edgar.user_agent`); env vars remain optional fallbacks.
+
 ## Current & Planned Tools
 
 | Tool | Priority | Status | Notes |

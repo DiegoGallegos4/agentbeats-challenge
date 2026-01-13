@@ -1,0 +1,17 @@
+# AgentBeats configuration (TOML-first; supports ${ENV_VAR} expansion)
+
+[tools.alpha_vantage]
+# Primary location for the Alpha Vantage API key (env is optional fallback)
+api_key = "${ALPHAVANTAGE_API_KEY}"
+cache_dir = "data/generated/tool_cache/alpha_vantage"
+
+[tools.edgar]
+# Descriptive User-Agent with contact info (required by SEC)
+user_agent = "agentbeats/0.1 (contact: your-email@example.com)"
+cache_dir = "data/generated/tool_cache/edgar"
+
+[llm]
+provider = "ollama"
+model = "llama3"
+endpoint = "http://localhost:11434"
+temperature = 0.0

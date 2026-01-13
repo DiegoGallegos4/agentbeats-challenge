@@ -3,13 +3,13 @@
 from __future__ import annotations
 
 import json
-import os
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Sequence
 
 import requests
 
+from ..config_loader import get_config_value
 from ..models import EventSpec, EvidenceItem
 from .base import ToolLogger
 
@@ -42,9 +42,15 @@ class EdgarEvidenceFetcher:
         logger: Optional[ToolLogger] = None,
     ) -> None:
         # SEC requires a descriptive User-Agent with contact info.
-        self.user_agent = user_agent or os.getenv("SEC_USER_AGENT") or "agentbeats/0.1 (contact: your-email@example.com)"
+        self.user_agent = user_agent or get_config_value(
+            ["tools", "edgar", "user_agent"],
+            default="agentbeats/0.1 (contact: your-email@example.com)",
+            env_fallback="SEC_USER_AGENT",
+        )
         self.ticker_map = {k.upper(): v for k, v in (ticker_map or {}).items()}
-        self.cache_dir = cache_dir or Path("data/generated/tool_cache/edgar")
+        self.cache_dir = cache_dir or Path(
+            get_config_value(["tools", "edgar", "cache_dir"], default="data/generated/tool_cache/edgar")
+        )
         self.cache_dir.mkdir(parents=True, exist_ok=True)
         self.logger = logger or ToolLogger("edgar", Path("data/generated/tool_logs"))
         self._session = requests.Session()

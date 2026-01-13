@@ -16,7 +16,7 @@ Retrieve SEC filings (8-K, 10-Q, 10-K) and expose them as `EvidenceItem` entries
 
 ## Behavior
 
-- **User-Agent:** Uses `SEC_USER_AGENT` env var or a default string. SEC expects contact info in User-Agent.
+- **User-Agent:** Uses `tools.edgar.user_agent` from `config/agentbeats.toml` (env `SEC_USER_AGENT` only as fallback). SEC expects contact info in User-Agent.
 - **Ticker→CIK lookup:** Accepts a provided map; otherwise downloads/caches `company_tickers.json` from SEC and keeps it in `data/generated/tool_cache/edgar/`.
 - **Submissions feed:** Fetches `https://data.sec.gov/submissions/CIK{cik}.json`, caches responses under `data/generated/tool_cache/edgar/`, and logs requests to `data/generated/tool_logs/edgar.jsonl`.
 - **Evidence construction:** Builds SEC filing URLs from CIK + accession + primary document and attaches filing dates as `timestamp`.

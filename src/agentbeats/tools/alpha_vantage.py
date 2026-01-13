@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import os
 import json
 from datetime import datetime, timezone
 from pathlib import Path
@@ -10,6 +9,7 @@ from typing import Any, Dict, Optional
 
 import requests
 
+from ..config_loader import get_config_value
 from .base import ToolLogger
 
 
@@ -17,9 +17,14 @@ class AlphaVantageClient:
     BASE_URL = "https://www.alphavantage.co/query"
 
     def __init__(self, api_key: Optional[str] = None, logger: Optional[ToolLogger] = None, cache_dir: Optional[Path] = None):
-        self.api_key = api_key or os.getenv("ALPHAVANTAGE_API_KEY")
+        self.api_key = api_key or get_config_value(["tools", "alpha_vantage", "api_key"], env_fallback="ALPHAVANTAGE_API_KEY")
         self.logger = logger or ToolLogger("alpha_vantage", Path("data/generated/tool_logs"))
-        self.cache_dir = cache_dir or Path("data/generated/tool_cache/alpha_vantage")
+        self.cache_dir = cache_dir or Path(
+            get_config_value(
+                ["tools", "alpha_vantage", "cache_dir"],
+                default="data/generated/tool_cache/alpha_vantage",
+            )
+        )
         self.cache_dir.mkdir(parents=True, exist_ok=True)
         self._memory_cache: Dict[tuple[str, str], Dict[str, Any]] = {}
         self.last_from_cache: bool = False
@@ -60,7 +65,9 @@ class AlphaVantageClient:
 
     def fetch_time_series(self, symbol: str, function: str = "TIME_SERIES_DAILY") -> Dict[str, Any]:
         if not self.api_key:
-            raise RuntimeError("Alpha Vantage API key not configured (set ALPHAVANTAGE_API_KEY).")
+            raise RuntimeError(
+                "Alpha Vantage API key not configured (set tools.alpha_vantage.api_key in config/agentbeats.toml or ALPHAVANTAGE_API_KEY)."
+            )
 
         cached = self._load_cache(symbol, function)
         if cached:

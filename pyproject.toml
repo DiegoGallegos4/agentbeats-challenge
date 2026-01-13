@@ -8,6 +8,8 @@ dependencies = [
     "pydantic>=2.8",
     "typer>=0.12",
     "requests>=2.32",
+    "tomli>=2.0",
+    "litellm>=1.41.0",
 ]
 
 [project.scripts]

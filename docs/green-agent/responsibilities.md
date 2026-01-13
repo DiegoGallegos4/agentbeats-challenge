@@ -42,6 +42,13 @@ Act as the autonomous assessor (Goal & Novelty) that defines the environment, is
 - **Inputs:** Prediction JSONL (`PredictionRecord`), ingestion snapshots (`EventSpec`), resolution feeds, tool outputs.
 - **Outputs:** Score bundles, audit reports, event snapshots, and monitoring signals (alerts/logs) consumable by both predictor teams and platform ops.
 
+### Evidence Coverage (EC) — Ideal Evaluator Behavior
+
+- Define required facts per event type (e.g., earnings: latest revenue/EPS/guidance; price-close: reference price/threshold/date; macro: latest metric/value/source date).
+- Normalize prediction citations (dedupe, provenance, timestamps) and drop any citation newer than the event close to prevent leakage.
+- Match citations to required facts using structured fields (ticker/form/tag/date/metric) or controlled heuristics; tolerate minor format differences but require exact source provenance.
+- Score EC as covered_required_facts / total_required_facts (optionally weighted), returning both the scalar and the covered/missing fact lists with their cited sources and timestamps.
+
 ## Alignment with Phases
 
 - *Phase 1:* initial environment + baseline scoring.

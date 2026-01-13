@@ -4,7 +4,8 @@ from typing import Optional
 import typer
 from pydantic import ValidationError
 
-from ..config import EvaluatorConfig, PredictorConfig
+from ..audit import LLMAuditor, SimpleAuditor
+from ..config import EvaluatorConfig, LLMConfig, PredictorConfig, config_path
 from ..evaluator import BaselineEvaluator
 from ..predictor import PurpleAgent
 from .common import get_default_path, parse_timestamp
@@ -124,6 +125,42 @@ def run_evaluator(
             )
 
 
+@run_app.command("audit")
+def run_audit(
+    predictions_path: Optional[Path] = typer.Option(None, help="JSONL predictions file to audit"),
+    mode: str = typer.Option("simple", help="Audit mode: simple or llm (Ollama)"),
+):
+    """
+    Run a lightweight evidence audit over predictions (citation counts/types).
+
+    \b
+    Examples:
+      agentbeats run audit
+      agentbeats run audit --predictions-path data/generated/predictions/latest.jsonl
+      agentbeats run audit --mode llm --predictions-path data/generated/predictions/latest.jsonl
+    """
+
+    default_predictions = get_default_path("predictions")
+    pred_path = predictions_path or default_predictions
+    if not pred_path.exists():
+        typer.secho(f"✗ Predictions file not found: {pred_path}", fg="red")
+        typer.echo("  Try regenerating with: agentbeats run predictor")
+        raise typer.Exit(code=1)
+
+    run_dir = EvaluatorConfig().run_log_dir
+    if mode == "llm":
+        auditor = LLMAuditor(run_dir, LLMConfig())
+    else:
+        auditor = SimpleAuditor(run_dir)
+    results = auditor.audit(predictions_path=pred_path)
+    summary = results.get("summary", {})
+    typer.secho("Audit Summary", fg="green")
+    typer.echo(f"  Events audited: {summary.get('events', 0)}")
+    typer.echo(f"  Avg EC: {summary.get('avg_ec', 0):.2f}")
+    typer.echo(f"  Events with citations: {summary.get('with_citations', 0)}")
+    typer.echo(f"  Run artifacts: {results.get('run_log_dir')}")
+
+
 @run_app.command("pipeline")
 def run_pipeline(
     limit: int = typer.Option(10, help="Number of events to ingest when using Polymarket source"),
@@ -139,8 +176,7 @@ def run_pipeline(
     Run the pipeline: ingest -> predict -> (optional) resolve prices -> evaluate.
 
     Notes:
-      - Set ALPHAVANTAGE_API_KEY to enable price resolutions.
-      - Set SEC_USER_AGENT to enable EDGAR fetches (used by other commands).
+      - Configure keys in config/agentbeats.toml (tools.alpha_vantage.api_key, tools.edgar.user_agent). Env vars remain optional fallbacks.
 
     \b
     Examples:
@@ -183,21 +219,27 @@ def run_pipeline(
             cfg = PredictorConfig()
             client = AlphaVantageClient(
                 api_key=cfg.alpha_vantage_api_key,
-                cache_dir=Path("data/generated/tool_cache/alpha_vantage"),
+                cache_dir=cfg.alpha_vantage_cache_dir,
             )
-            resolver = PriceCloseResolver(client)
-            events = list(EventIngestion(IngestionConfig(fixture_events=ev_path)).load_events(ev_path))
-            resolutions = resolver.resolve(events)
-            if resolutions:
-                res_path.parent.mkdir(parents=True, exist_ok=True)
-                with res_path.open("w", encoding="utf-8") as handle:
-                    import json
-                    for row in resolutions:
-                        handle.write(json.dumps(row))
-                        handle.write("\n")
-                typer.secho(f"✓ Resolved {len(resolutions)} price events to {res_path}", fg="green")
+            if not client.is_configured():
+                typer.secho(
+                    f"↷ Alpha Vantage key missing; configure tools.alpha_vantage.api_key in {config_path()} (or ALPHAVANTAGE_API_KEY). Skipping price resolution.",
+                    fg="yellow",
+                )
             else:
-                typer.secho("↷ No price-close events found to resolve.", fg="yellow")
+                resolver = PriceCloseResolver(client)
+                events = list(EventIngestion(IngestionConfig(fixture_events=ev_path)).load_events(ev_path))
+                resolutions = resolver.resolve(events)
+                if resolutions:
+                    res_path.parent.mkdir(parents=True, exist_ok=True)
+                    with res_path.open("w", encoding="utf-8") as handle:
+                        import json
+                        for row in resolutions:
+                            handle.write(json.dumps(row))
+                            handle.write("\n")
+                    typer.secho(f"✓ Resolved {len(resolutions)} price events to {res_path}", fg="green")
+                else:
+                    typer.secho("↷ No price-close events found to resolve.", fg="yellow")
         except Exception as exc:  # noqa: BLE001
             typer.secho(f"✗ Price resolution skipped due to error: {exc}", fg="red")
             typer.secho(f"↷ Using existing/placeholder resolutions at {res_path}", fg="yellow")

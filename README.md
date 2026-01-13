@@ -10,12 +10,13 @@ Out of the box, you get CLI-driven ingestion, a stub predictor with evidence hoo
 - [Quickstart](#quickstart)
 - [CLI commands](#cli-commands)
   - [Ingesting events](#ingesting-events)
-  - [Running predictor (purple)](#running-predictor-purple)
-  - [Running evaluator (green)](#running-evaluator-green)
-  - [Pipeline](#pipeline)
-  - [Resolutions](#resolutions)
-  - [Tools](#tools)
-  - [Status](#status)
+- [Running predictor (purple)](#running-predictor-purple)
+- [Running evaluator (green)](#running-evaluator-green)
+- [Audits](#audits)
+- [Pipeline](#pipeline)
+- [Resolutions](#resolutions)
+- [Tools](#tools)
+- [Status](#status)
 - [Flows (sequence)](#flows-sequence)
 - [Glossary](#glossary)
 
@@ -41,13 +42,14 @@ agentbeats resolve placeholders  # or skip if you already have resolutions
 agentbeats run evaluator
 ```
 
-For live data: set `ALPHAVANTAGE_API_KEY` (for price), `SEC_USER_AGENT` (for EDGAR), then use `agentbeats run pipeline --source polymarket`.
+For live data: add keys to `config/agentbeats.toml` (see `config/agentbeats.example.toml`), then run `agentbeats run pipeline --source polymarket`. Env vars remain optional fallbacks.
 
 ## CLI commands
 
-Environment variables:
-- `ALPHAVANTAGE_API_KEY` (required for price evidence/resolution).
-- `SEC_USER_AGENT` (e.g., `agentbeats/0.1 (contact: you@example.com)`) required for EDGAR fetches.
+Configuration:
+- Primary config lives at `config/agentbeats.toml` (copy from `config/agentbeats.example.toml`).
+- Keys of interest: `tools.alpha_vantage.api_key`, `tools.edgar.user_agent` (with contact info), cache dirs, and tool log dirs.
+- Env vars such as `ALPHAVANTAGE_API_KEY` / `SEC_USER_AGENT` are optional fallbacks if the TOML value is empty.
 
 ### Ingesting events
 Snapshot events from Polymarket or fixtures into a JSONL file (`data/generated/events/latest.jsonl`).
@@ -122,6 +124,26 @@ agentbeats run evaluator \
   --events-path data/generated/events/latest.jsonl
 ```
 
+### Audits
+Run a lightweight audit that reports citation counts/types per prediction and a basic evidence coverage score (1 if any citation present, else 0). LLM mode (Ollama via LiteLLM) is available for richer judging when configured.
+
+| Option | Description |
+| --- | --- |
+| `--predictions-path` | PATH: predictions JSONL |
+| `--mode` | STRING: `simple` (default) or `llm` (requires Ollama running and LLM config) |
+
+Use case: Audit fixture predictions quickly.
+```bash
+agentbeats run audit \
+  --predictions-path data/generated/predictions/latest.jsonl
+```
+LLM mode (Ollama via LiteLLM; ensure Ollama is running and config/agentbeats.toml has llm.* set):
+```bash
+agentbeats run audit --mode llm \
+  --predictions-path data/generated/predictions/latest.jsonl
+```
+Outputs audit JSONL under `data/generated/runs/<run_id>/audits/`.
+
 ### Pipeline
 Run the end-to-end loop (ingest, predict, optionally resolve price-close events, then evaluate) with optional skips.
 
@@ -159,7 +181,7 @@ Create placeholder resolutions or resolve price-close events via Alpha Vantage (
 | Command | Notes |
 | --- | --- |
 | `agentbeats resolve placeholders` | Writes editable ResolutionRecord JSONL (defaults to `data/generated/resolutions/latest.jsonl`) |
-| `agentbeats resolve prices` | Requires `ALPHAVANTAGE_API_KEY`; resolves “close above $X on DATE” by filling ResolutionRecord JSONL (defaults to generated resolutions path) |
+| `agentbeats resolve prices` | Uses Alpha Vantage (configure `tools.alpha_vantage.api_key` in `config/agentbeats.toml`, env fallback allowed); resolves “close above $X on DATE” by filling ResolutionRecord JSONL (defaults to generated resolutions path) |
 
 #### Use case 1: Generate editable placeholders
 Create a resolutions file with outcome=0 stubs to fill manually.
@@ -182,8 +204,8 @@ Available tools:
 
 | Command | Notes |
 | --- | --- |
-| `agentbeats tool edgar` | Set `SEC_USER_AGENT`; writes EDGAR JSONL (`data/generated/edgar/latest.jsonl`); default forms: 8-K/10-Q/10-K; default fact tags: EPS diluted, revenues; default limit: 1. (SEC docs: https://www.sec.gov/edgar/sec-api-documentation) |
-| `agentbeats tool alpha-vantage` | Set `ALPHAVANTAGE_API_KEY`; fetches raw time series (cached); default function: `TIME_SERIES_DAILY`. (Docs: https://www.alphavantage.co/documentation/) |
+| `agentbeats tool edgar` | Configure `tools.edgar.user_agent` in `config/agentbeats.toml`; writes EDGAR JSONL (`data/generated/edgar/latest.jsonl`); default forms: 8-K/10-Q/10-K; default fact tags: EPS diluted, revenues; default limit: 1. (SEC docs: https://www.sec.gov/edgar/sec-api-documentation) |
+| `agentbeats tool alpha-vantage` | Configure `tools.alpha_vantage.api_key` in `config/agentbeats.toml` (env fallback supported); fetches raw time series (cached); default function: `TIME_SERIES_DAILY`. (Docs: https://www.alphavantage.co/documentation/) |
 
 Use case: Fetch EDGAR filings/facts
 ```bash
@@ -285,4 +307,4 @@ sequenceDiagram
 - **Tool adapters**: Shared external data fetchers (news, Alpha Vantage, EDGAR, Polymarket) used by predictors/resolvers.
 - **Run artifacts**: Evaluation outputs stored under `data/generated/runs/<timestamp>/` (metrics, per-event records, inputs).
 
-See `docs/green-agent/plan.md` and `docs/purple-agent/responsibilities.md` for the roadmap and predictor contract, and `docs/tools/README.md` for shared tool interfaces.
+See [docs/green-agent/plan.md](docs/green-agent/plan.md) and [docs/purple-agent/responsibilities.md](docs/purple-agent/responsibilities.md) for the roadmap and predictor contract, and [docs/tools/README.md](docs/tools/README.md) for shared tool interfaces.

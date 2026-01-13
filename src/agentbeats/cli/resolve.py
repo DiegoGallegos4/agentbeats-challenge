@@ -67,7 +67,7 @@ def resolve_prices(
     Resolve 'close above $X on DATE' events via Alpha Vantage (uses cache when available).
 
     Notes:
-      - Requires ALPHAVANTAGE_API_KEY in the environment.
+      - Configure Alpha Vantage key in config/agentbeats.toml (tools.alpha_vantage.api_key); env is an optional fallback.
 
     \b
     Examples:
@@ -77,10 +77,10 @@ def resolve_prices(
 
     cfg = PredictorConfig()
     if not cfg.alpha_vantage_api_key:
-        raise typer.BadParameter("ALPHAVANTAGE_API_KEY not set; cannot resolve prices.")
+        raise typer.BadParameter("Alpha Vantage key missing. Set tools.alpha_vantage.api_key in config/agentbeats.toml (or ALPHAVANTAGE_API_KEY).")
     client = AlphaVantageClient(
         api_key=cfg.alpha_vantage_api_key,
-        cache_dir=Path("data/generated/tool_cache/alpha_vantage"),
+        cache_dir=cfg.alpha_vantage_cache_dir,
     )
     resolver = PriceCloseResolver(client)
     eloc = events_path or get_default_path("events")

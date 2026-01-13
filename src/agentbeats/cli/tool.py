@@ -5,6 +5,7 @@ from typing import Optional
 import typer
 
 from ..models import EventSpec
+from ..config import PredictorConfig, config_path
 from ..tools import AlphaVantageClient, EdgarEvidenceFetcher
 from .common import get_default_path
 
@@ -28,7 +29,7 @@ def fetch_edgar(
     {"id": "...", "filings": [...EvidenceItem...], "facts": [...fact dicts...]}
 
     Notes:
-      - Set SEC_USER_AGENT (e.g., agentbeats/0.1 (contact: you@example.com)) to avoid SEC blocks.
+      - Configure EDGAR user agent in config/agentbeats.toml (tools.edgar.user_agent). SEC expects contact info.
 
     \b
     Examples:
@@ -44,7 +45,11 @@ def fetch_edgar(
     form_list = [f.strip() for f in forms.split(",") if f.strip()]
     tags_list = [t.strip() for t in fact_tags.split(",") if t.strip()]
 
-    fetcher = EdgarEvidenceFetcher()
+    cfg = PredictorConfig()
+    fetcher = EdgarEvidenceFetcher(
+        user_agent=cfg.edgar_user_agent,
+        cache_dir=cfg.edgar_cache_dir,
+    )
     written = 0
     with eloc.open("r", encoding="utf-8") as ev_handle, out.open("w", encoding="utf-8") as out_handle:
         for line in ev_handle:
@@ -80,7 +85,7 @@ def fetch_alpha(
     Fetch Alpha Vantage time series for debugging (uses cache if present).
 
     Notes:
-      - Requires ALPHAVANTAGE_API_KEY in the environment.
+      - Configure Alpha Vantage key in config/agentbeats.toml (tools.alpha_vantage.api_key); env ALPHAVANTAGE_API_KEY is a fallback.
 
     \b
     Examples:
@@ -88,11 +93,15 @@ def fetch_alpha(
         --output-path data/generated/tool_cache/alpha_vantage/tsla_daily.json
     """
 
+    cfg = PredictorConfig()
     client = AlphaVantageClient(
-        cache_dir=Path("data/generated/tool_cache/alpha_vantage"),
+        api_key=cfg.alpha_vantage_api_key,
+        cache_dir=cfg.alpha_vantage_cache_dir,
     )
     if not client.is_configured():
-        raise typer.BadParameter("ALPHAVANTAGE_API_KEY not set; cannot fetch Alpha Vantage data.")
+        raise typer.BadParameter(
+            f"Alpha Vantage key missing. Set tools.alpha_vantage.api_key in {config_path()} (or ALPHAVANTAGE_API_KEY)."
+        )
     data = client.fetch_time_series(symbol, function=function)
     if output_path:
         output_path.parent.mkdir(parents=True, exist_ok=True)

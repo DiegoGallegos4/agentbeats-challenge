@@ -13,3 +13,4 @@
 - CLI workflows (grouped: `agentbeats ingest ...`, `run ...`, `resolve ...`, `tool ...`, `status ...`) are described in `README.md`. When adding a new CLI command: add it under the appropriate group, document it in README (table + examples), and ensure `--help` has usage examples/env vars.
 - Make a plan with milestones and come back to update those once those are completed.
 - Document public utilities in `docs/` when you change behavior and use documents from there as context.
+- Naming rule: introduce acronyms before using them (e.g., “Evidence Coverage (EC)”), then use the acronym consistently.
