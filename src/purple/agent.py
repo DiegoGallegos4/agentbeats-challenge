@@ -1,14 +1,18 @@
-from typing import Any
+from datetime import date as date_module
+from typing import Any, Iterable
 from pydantic import BaseModel, HttpUrl, ValidationError
 from a2a.server.tasks import TaskUpdater
 from a2a.types import Message, TaskState, Part, TextPart, DataPart
 from a2a.utils import get_message_text, new_agent_text_message
 
 from messenger import Messenger
+from agentbeats.portfolio import portfolio_manager
+from agentbeats.portfolio.tools import data_manager as portfolio_data_manager
+from agentbeats.portfolio.tools.sp500_utils import get_sp500_tickers
 
 
 class EvalRequest(BaseModel):
-    """Request format sent by the AgentBeats platform to green agents."""
+    """Request format sent by the AgentBeats platform to agents."""
     participants: dict[str, HttpUrl] # role -> agent URL
     config: dict[str, Any]
 
@@ -22,6 +26,18 @@ class Agent:
     def __init__(self):
         self.messenger = Messenger()
         # Initialize other state here
+        self.default_tickers = ["AAPL", "MSFT", "GOOGL", "AMZN", "TSLA"]
+
+    def _resolve_tickers(self, raw: Any) -> list[str]:
+        if raw is None or raw == "subset":
+            return list(self.default_tickers)
+        if raw == "all":
+            return get_sp500_tickers()
+        if isinstance(raw, str):
+            return [t.strip() for t in raw.split(",") if t.strip()]
+        if isinstance(raw, Iterable):
+            return [str(t).strip() for t in raw if str(t).strip()]
+        return list(self.default_tickers)
 
     def validate_request(self, request: EvalRequest) -> tuple[bool, str]:
         missing_roles = set(self.required_roles) - set(request.participants.keys())
@@ -57,19 +73,32 @@ class Agent:
             await updater.reject(new_agent_text_message(f"Invalid request: {e}"))
             return
 
-        # Replace example code below with your agent logic
-        # Use request.participants to get participant agent URLs by role
-        # Use request.config for assessment parameters
+        config = request.config or {}
+        target_date = config.get("date") or date_module.today().isoformat()
+        tickers = self._resolve_tickers(config.get("tickers"))
+        download = bool(config.get("download", False))
 
         await updater.update_status(
-            TaskState.working, new_agent_text_message("Thinking...")
+            TaskState.working, new_agent_text_message("Running portfolio analysis...")
         )
+
+        if download:
+            portfolio_data_manager.download_all_data(tickers, target_date)
+
+        portfolio = portfolio_manager.build_portfolio(tickers, date=target_date)
+        if portfolio.empty:
+            await updater.reject(new_agent_text_message("No portfolio results generated."))
+            return
+
+        weights = portfolio.to_dict(orient="records")
         await updater.add_artifact(
             parts=[
-                Part(root=TextPart(text="The agent performed well.")),
+                Part(root=TextPart(text="Portfolio weights generated.")),
                 Part(root=DataPart(data={
-                    # structured assessment results
-                }))
+                    "date": target_date,
+                    "tickers": tickers,
+                    "weights": weights,
+                })),
             ],
             name="Result",
         )

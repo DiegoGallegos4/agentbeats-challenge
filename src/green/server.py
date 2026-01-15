@@ -24,16 +24,18 @@ def main():
     # See: https://a2a-protocol.org/latest/tutorials/python/3-agent-skills-and-card/
     
     skill = AgentSkill(
-        id="",
-        name="",
-        description="",
-        tags=[],
-        examples=[]
+        id="portfolio_evaluation",
+        name="Portfolio Evaluation",
+        description="Evaluates portfolio weights from a purple agent and computes PnL.",
+        tags=["finance", "evaluation", "portfolio"],
+        examples=[
+            '{\"participants\": {\"agent\": \"http://localhost:9010\"}, \"config\": {\"date\": \"2025-12-22\", \"pnl_date\": \"2025-12-23\", \"tickers\": \"subset\"}}',
+        ],
     )
 
     agent_card = AgentCard(
-        name="",
-        description="",
+        name="PortfolioEvaluator",
+        description="Green agent that scores portfolio weights against market data.",
         url=args.card_url or f"http://{args.host}:{args.port}/",
         version='1.0.0',
         default_input_modes=['text'],

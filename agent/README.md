@@ -44,7 +44,7 @@ pnl_data/
 
 2.  **Dependencies**:
     ```bash
-    pip install pandas numpy langchain langgraph langchain-openai alpha_vantage ta joblib beautifulsoup4 tavily-python python-dotenv
+    pip install pandas numpy langchain langgraph langchain-openai langchain-community alpha_vantage ta joblib beautifulsoup4 tavily-python python-dotenv langchain_community
     ```
 
 ## 🛠 Usage

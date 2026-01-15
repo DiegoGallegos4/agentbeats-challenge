@@ -1,0 +1,13 @@
+[green_agent]
+endpoint = "http://127.0.0.1:19009"
+cmd = "python src/green/server.py --host 127.0.0.1 --port 19009"
+
+[[participants]]
+role = "agent"
+endpoint = "http://127.0.0.1:19010"
+cmd = "python src/purple/server.py --host 127.0.0.1 --port 19010"
+
+[config]
+date = "2025-12-22"
+pnl_date = "2025-12-23"
+tickers = "subset"

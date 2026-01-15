@@ -1,4 +1,6 @@
 import json
+import os
+from datetime import datetime
 from uuid import uuid4
 
 import httpx
@@ -18,6 +20,7 @@ from a2a.types import (
 
 
 DEFAULT_TIMEOUT = 300
+LOG_MESSAGES = os.environ.get("AGENTBEATS_LOG_MESSAGES") == "1"
 
 
 def create_message(
@@ -115,6 +118,10 @@ class Messenger:
         Returns:
             str: The agent's response message
         """
+        if LOG_MESSAGES:
+            timestamp = datetime.utcnow().isoformat(timespec="seconds")
+            print(f"[A2A OUT {timestamp}] {url} :: {message}")
+
         outputs = await send_message(
             message=message,
             base_url=url,
@@ -123,8 +130,12 @@ class Messenger:
         )
         if outputs.get("status", "completed") != "completed":
             raise RuntimeError(f"{url} responded with: {outputs}")
+        response = outputs["response"]
+        if LOG_MESSAGES:
+            timestamp = datetime.utcnow().isoformat(timespec="seconds")
+            print(f"[A2A IN  {timestamp}] {url} :: {response}")
         self._context_ids[url] = outputs.get("context_id", None)
-        return outputs["response"]
+        return response
 
     def reset(self):
         self._context_ids = {}

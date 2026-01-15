@@ -1,4 +1,5 @@
 import os
+from pathlib import Path
 import json
 import pandas as pd
 from datetime import datetime, timedelta
@@ -12,7 +13,8 @@ from datetime import datetime, timedelta
 from . import alpha_vantage_downloader as avd
 import time
 
-BASE_DIR = "/Volumes/ExtremePro/AV_data"
+REPO_ROOT = Path(__file__).resolve().parents[2]
+BASE_DIR = os.environ.get("AGENTBEATS_DATA_DIR", str(REPO_ROOT / "data"))
 
 def get_dirs(date_str):
     """Returns dictionary of directory paths for a specific date."""

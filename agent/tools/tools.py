@@ -146,7 +146,10 @@ def web_search(query: str, target_date: str = None) -> str:
     try:
         api_key = os.environ.get("TAVILY_API_KEY")
         if not api_key:
-            return "Error: TAVILY_API_KEY not found in environment variables."
+            search = DuckDuckGoSearchRun()
+            if target_date:
+                query = f"{query} before {target_date}"
+            return search.run(query)
             
         # Append date restriction to query if provided
         if target_date:
