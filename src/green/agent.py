@@ -1,4 +1,5 @@
 import json
+import os
 from typing import Any
 from pydantic import BaseModel, HttpUrl, ValidationError
 from a2a.server.tasks import TaskUpdater
@@ -22,6 +23,7 @@ class Agent:
     def __init__(self):
         self.messenger = Messenger()
         # Initialize other state here
+        self._log_requests = os.environ.get("AGENTBEATS_LOG_MESSAGES") == "1"
 
     def _extract_payload(self, response: str) -> dict[str, Any]:
         start = response.find("{")
@@ -133,6 +135,8 @@ class Agent:
         Use self.messenger.talk_to_agent(message, url) to call other agents.
         """
         input_text = get_message_text(message)
+        if self._log_requests:
+            print(f"[GREEN IN] {input_text}")
 
         try:
             request: EvalRequest = EvalRequest.model_validate_json(input_text)
