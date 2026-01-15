@@ -5,6 +5,7 @@ USER agent
 WORKDIR /home/agent
 
 COPY --chown=agent:agent pyproject.toml README.md ./
+COPY --chown=agent:agent src/agentbeats src/agentbeats
 COPY --chown=agent:agent src/green src/green
 
 RUN \
