@@ -1,0 +1,48 @@
+name: Build and Publish Agent Images
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+env:
+  IMAGE_REPO: ghcr.io/diegogallegos4/agentbeats-challenge
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push green image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile.green
+          push: true
+          tags: |
+            ${{ env.IMAGE_REPO }}:latest
+            ${{ env.IMAGE_REPO }}:green
+
+      - name: Build and push purple image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile.purple
+          push: true
+          tags: |
+            ${{ env.IMAGE_REPO }}:purple

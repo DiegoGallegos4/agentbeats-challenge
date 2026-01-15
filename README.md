@@ -298,6 +298,40 @@ sequenceDiagram
     CLI-->>Dev: summary + sample events + run log dir
 ```
 
+## Docker
+
+Build and run the green or purple agent images using the dedicated Dockerfiles. Use distinct tags so both images can coexist (`:green` and `:purple`), with `:latest` as an alias for green.
+You can also run `scripts/build_agents.sh` to build both locally using the same tags.
+For CI publishing, see `docs/deployment/github-actions.md`.
+
+Build green:
+```bash
+docker build -f Dockerfile.green \
+  -t ghcr.io/diegogallegos4/agentbeats-challenge:latest \
+  -t ghcr.io/diegogallegos4/agentbeats-challenge:green .
+```
+
+Run green:
+```bash
+docker run --rm -p 9009:9009 ghcr.io/diegogallegos4/agentbeats-challenge:green
+```
+
+Build purple:
+```bash
+docker build -f Dockerfile.purple -t ghcr.io/diegogallegos4/agentbeats-challenge:purple .
+```
+
+Run purple:
+```bash
+docker run --rm -p 9010:9009 ghcr.io/diegogallegos4/agentbeats-challenge:purple
+```
+
+Run both at once on different ports:
+```bash
+docker run --rm -p 9009:9009 ghcr.io/diegogallegos4/agentbeats-challenge:green
+docker run --rm -p 9010:9009 ghcr.io/diegogallegos4/agentbeats-challenge:purple
+```
+
 ## Glossary
 - **EventSpec**: Canonical event/task packet (id, question, resolution_date, source, tags, baseline_probability).
 - **PredictionRecord**: Purple agent output (probability + rationale/evidence + metadata) keyed by EventSpec.id.

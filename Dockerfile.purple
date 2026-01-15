@@ -1,0 +1,16 @@
+FROM ghcr.io/astral-sh/uv:python3.13-bookworm
+
+RUN adduser agent
+USER agent
+WORKDIR /home/agent
+
+COPY --chown=agent:agent pyproject.toml README.md ./
+COPY --chown=agent:agent src/purple src/purple
+
+RUN \
+    --mount=type=cache,target=/home/agent/.cache/uv,uid=1000 \
+    uv sync
+
+ENTRYPOINT ["uv", "run", "src/purple/server.py"]
+CMD ["--host", "0.0.0.0"]
+EXPOSE 9009

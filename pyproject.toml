@@ -10,6 +10,8 @@ dependencies = [
     "requests>=2.32",
     "tomli>=2.0",
     "litellm>=1.41.0",
+    "a2a-sdk[http-server]>=0.3.20",
+    "uvicorn>=0.38.0",
 ]
 
 [project.scripts]

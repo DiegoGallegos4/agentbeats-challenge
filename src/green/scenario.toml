@@ -1,0 +1,12 @@
+[green_agent]
+endpoint = "http://127.0.0.1:9009"
+cmd = "python src/green/server.py --host 127.0.0.1 --port 9009"
+
+[[participants]]
+role = "agent"
+endpoint = "http://127.0.0.1:9010"
+cmd = "python src/purple/server.py --host 127.0.0.1 --port 9010"
+
+[config]
+domain = "finance"
+num_tasks = 4
