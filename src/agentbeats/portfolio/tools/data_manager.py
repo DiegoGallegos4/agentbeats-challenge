@@ -14,7 +14,7 @@ from . import alpha_vantage_downloader as avd
 import time
 
 REPO_ROOT = Path(__file__).resolve().parents[4]
-BASE_DIR = os.environ.get("AGENTBEATS_DATA_DIR", str(REPO_ROOT / "data"))
+BASE_DIR = str(REPO_ROOT / "data")
 
 def get_dirs(date_str):
     """Returns dictionary of directory paths for a specific date."""
@@ -32,54 +32,94 @@ def download_all_data(tickers, target_date_str):
     Downloads all data for the given tickers for the target date.
     Saves to BASE_DIR/target_date_str/{data_type}/
     """
-    dirs = get_dirs(target_date_str)
-    for d in dirs.values():
-        os.makedirs(d, exist_ok=True)
+    try:
+        dirs = get_dirs(target_date_str)
+        for d in dirs.values():
+            os.makedirs(d, exist_ok=True)
+            
+        print(f"Starting batch download for {len(tickers)} tickers for date {target_date_str}...")
+        print(f"Saving to {os.path.join(BASE_DIR, target_date_str)}")
         
-    print(f"Starting batch download for {len(tickers)} tickers for date {target_date_str}...")
-    print(f"Saving to {os.path.join(BASE_DIR, target_date_str)}")
-    
-    for i, ticker in enumerate(tickers):
-        print(f"[{i+1}/{len(tickers)}] Downloading data for {ticker}...")
-        
-        # 1. Market Data (Daily)
-        end_dt = datetime.strptime(target_date_str, '%Y-%m-%d')
-        start_dt = end_dt - timedelta(days=730)
-        market_data = avd.get_daily_data(ticker, start_dt.strftime('%Y-%m-%d'), target_date_str)
-        if market_data:
-            df = pd.DataFrame(market_data)
-            csv_path = os.path.join(dirs['market'], f"{ticker}.csv")
-            df.to_csv(csv_path, index=False)
-        
-        # 2. News Data
-        # Fetch 7 days of news for context
-        news_start = end_dt - timedelta(days=7)
-        news_items = avd.get_news_for_date_range(ticker, news_start.strftime('%Y-%m-%d'), target_date_str)
-        if news_items:
-            json_path = os.path.join(dirs['news'], f"{ticker}.json")
-            with open(json_path, 'w') as f:
-                json.dump(news_items, f, indent=2)
+        for i, ticker in enumerate(tickers):
+            market_path = os.path.join(dirs['market'], f"{ticker}.csv")
+            news_path = os.path.join(dirs['news'], f"{ticker}.json")
+            insider_path = os.path.join(dirs['insider'], f"{ticker}.json")
+            options_path = os.path.join(dirs['options'], f"{ticker}.json")
+            analyst_path = os.path.join(dirs['analyst'], f"{ticker}.json")
+            if (
+                os.path.exists(market_path)
+                and os.path.exists(news_path)
+                and os.path.exists(insider_path)
+                and os.path.exists(options_path)
+                and os.path.exists(analyst_path)
+            ):
+                print(f"[{i+1}/{len(tickers)}] {ticker}: data already present, skipping.")
+                continue
+
+            print(f"[{i+1}/{len(tickers)}] Downloading data for {ticker}...")
+            try:
+                # 1. Market Data (Daily)
+                end_dt = datetime.strptime(target_date_str, '%Y-%m-%d')
+                start_dt = end_dt - timedelta(days=730)
+                if not os.path.exists(market_path):
+                    try:
+                        market_data = avd.get_daily_data(ticker, start_dt.strftime('%Y-%m-%d'), target_date_str)
+                    except Exception as exc:
+                        print(f"Warning: market data failed for {ticker}: {exc}")
+                        market_data = None
+                    if market_data:
+                        df = pd.DataFrame(market_data)
+                        df.to_csv(market_path, index=False)
                 
-        # 3. Insider Data
-        insider_data = avd.get_insider_transactions(ticker)
-        if insider_data:
-            json_path = os.path.join(dirs['insider'], f"{ticker}.json")
-            with open(json_path, 'w') as f:
-                json.dump(insider_data, f, indent=2)
-                
-        # 4. Options Data
-        options_data = avd.get_options_data(ticker, date=target_date_str)
-        if options_data:
-            json_path = os.path.join(dirs['options'], f"{ticker}.json")
-            with open(json_path, 'w') as f:
-                json.dump(options_data, f, indent=2)
-                
-        # 5. Analyst Data
-        analyst_data = avd.get_analyst_data(ticker)
-        if analyst_data:
-            json_path = os.path.join(dirs['analyst'], f"{ticker}.json")
-            with open(json_path, 'w') as f:
-                json.dump(analyst_data, f, indent=2)
+                # 2. News Data
+                # Fetch 7 days of news for context
+                news_start = end_dt - timedelta(days=7)
+                if not os.path.exists(news_path):
+                    try:
+                        news_items = avd.get_news_for_date_range(ticker, news_start.strftime('%Y-%m-%d'), target_date_str)
+                    except Exception as exc:
+                        print(f"Warning: news fetch failed for {ticker}: {exc}")
+                        news_items = None
+                    if news_items:
+                        with open(news_path, 'w') as f:
+                            json.dump(news_items, f, indent=2)
+                        
+                # 3. Insider Data
+                if not os.path.exists(insider_path):
+                    try:
+                        insider_data = avd.get_insider_transactions(ticker)
+                    except Exception as exc:
+                        print(f"Warning: insider fetch failed for {ticker}: {exc}")
+                        insider_data = None
+                    if insider_data:
+                        with open(insider_path, 'w') as f:
+                            json.dump(insider_data, f, indent=2)
+                        
+                # 4. Options Data
+                if not os.path.exists(options_path):
+                    try:
+                        options_data = avd.get_options_data(ticker, date=target_date_str)
+                    except Exception as exc:
+                        print(f"Warning: options fetch failed for {ticker}: {exc}")
+                        options_data = None
+                    if options_data:
+                        with open(options_path, 'w') as f:
+                            json.dump(options_data, f, indent=2)
+                        
+                # 5. Analyst Data
+                if not os.path.exists(analyst_path):
+                    try:
+                        analyst_data = avd.get_analyst_data(ticker)
+                    except Exception as exc:
+                        print(f"Warning: analyst fetch failed for {ticker}: {exc}")
+                        analyst_data = None
+                    if analyst_data:
+                        with open(analyst_path, 'w') as f:
+                            json.dump(analyst_data, f, indent=2)
+            except Exception as exc:
+                print(f"Warning: download failed for {ticker}: {exc}")
+    except Exception as exc:
+        print(f"Warning: download batch failed for {target_date_str}: {exc}")
                 
         # Rate Limit Sleep
         time.sleep(12) 

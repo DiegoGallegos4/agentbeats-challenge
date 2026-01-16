@@ -332,13 +332,17 @@ def get_news_for_date_range(ticker, start_date, end_date, api_key=None, sleep=1)
         
         # Reuse existing get_news_sentiment function
         # Note: get_news_sentiment returns a list of dicts (the 'feed') or None
-        news_items = get_news_sentiment(
-            ticker=ticker, 
-            api_key=api_key, 
-            time_from=time_from, 
-            time_to=time_to,
-            limit=1000 # Try to get max per day
-        )
+        try:
+            news_items = get_news_sentiment(
+                ticker=ticker,
+                api_key=api_key,
+                time_from=time_from,
+                time_to=time_to,
+                limit=1000  # Try to get max per day
+            )
+        except Exception as exc:
+            print(f"  News fetch failed for {ticker} on {current_dt.strftime('%Y-%m-%d')}: {exc}")
+            news_items = None
         
         if news_items:
             print(f"  Found {len(news_items)} articles.")

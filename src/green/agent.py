@@ -388,11 +388,6 @@ class Agent:
             return
 
         config = request.config or {}
-        data_root = config.get("data_root")
-        if data_root:
-            resolved_root = str(self._resolve_path(data_root))
-            portfolio_data_manager.BASE_DIR = resolved_root
-            os.environ["AGENTBEATS_DATA_DIR"] = resolved_root
         benchmark_path = config.get("benchmark_path")
         if benchmark_path:
             benchmark_path = self._resolve_path(benchmark_path)
@@ -462,6 +457,25 @@ class Agent:
             return
 
         tickers = config.get("tickers")
+        download = bool(config.get("download", True))
+        if download:
+            if tickers is None or tickers == "subset":
+                tickers_list = ["AAPL", "MSFT", "GOOGL", "AMZN", "TSLA"]
+            elif isinstance(tickers, str):
+                tickers_list = [t.strip() for t in tickers.split(",") if t.strip()]
+            elif isinstance(tickers, list):
+                tickers_list = tickers
+            else:
+                tickers_list = [str(tickers)]
+            try:
+                portfolio_data_manager.download_all_data(tickers_list, date)
+            except Exception as exc:
+                print(f"Warning: download failed for {date}: {exc}")
+            if pnl_date != date:
+                try:
+                    portfolio_data_manager.download_all_data(tickers_list, pnl_date)
+                except Exception as exc:
+                    print(f"Warning: download failed for {pnl_date}: {exc}")
 
         await updater.update_status(
             TaskState.working,

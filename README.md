@@ -133,6 +133,16 @@ agentbeats run evaluator \
   --events-path data/generated/events/latest.jsonl
 ```
 
+#### Running the green agent server (A2A)
+Start the green agent service directly:
+```bash
+python src/green/server.py --host 127.0.0.1 --port 19009
+```
+Run a full scenario (green + purple) with the bundled scenario file:
+```bash
+python scripts/run_scenario.py scenario.toml
+```
+
 ### Audits
 Run a lightweight audit that reports citation counts/types per prediction and a basic evidence coverage score (1 if any citation present, else 0). LLM mode (Ollama via LiteLLM) is available for richer judging when configured.
 

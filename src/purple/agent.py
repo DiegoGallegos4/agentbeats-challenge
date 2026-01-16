@@ -160,11 +160,6 @@ class Agent:
             return
 
         config = request.config or {}
-        data_root = config.get("data_root")
-        if data_root:
-            resolved_root = str(Path(data_root).expanduser().resolve())
-            portfolio_data_manager.BASE_DIR = resolved_root
-            os.environ["AGENTBEATS_DATA_DIR"] = resolved_root
         tasks = config.get("tasks")
         if tasks:
             await updater.update_status(
@@ -190,7 +185,7 @@ class Agent:
 
         target_date = config.get("date") or date_module.today().isoformat()
         tickers = self._resolve_tickers(config.get("tickers"))
-        download = bool(config.get("download", False))
+        download = bool(config.get("download", True))
 
         await updater.update_status(
             TaskState.working, new_agent_text_message("Running portfolio analysis...")
@@ -199,7 +194,10 @@ class Agent:
         if download:
             missing = self._filter_missing_market_data(tickers, target_date)
             if missing:
-                portfolio_data_manager.download_all_data(missing, target_date)
+                try:
+                    portfolio_data_manager.download_all_data(missing, target_date)
+                except Exception as exc:
+                    print(f"Warning: download failed for {target_date}: {exc}")
             else:
                 print(f"Data already present for {len(tickers)} tickers on {target_date}, skipping download.")
 
