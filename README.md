@@ -1,8 +1,17 @@
-# PolyFutureBench
+# FinaceXBench
 
-PolyFutureBench is a finance-focused forecasting and evaluation pipeline built for the AgentBeats competition. It targets developers and researchers who want to ingest real or fixture finance events, generate structured predictions, resolve outcomes, and score them with standard metrics (Accuracy/Brier). 
+FinaceXBench is a finance-focused forecasting and evaluation pipeline built for the AgentBeats competition. It targets developers and researchers who want to ingest real or fixture finance events, generate structured predictions, resolve outcomes, and score them with standard metrics (Accuracy/Brier). 
 
 Out of the box, you get CLI-driven ingestion, a stub predictor with evidence hooks (news/Alpha Vantage/EDGAR), resolution helpers (placeholders and price-close), and a green evaluator that produces run artifacts for reproducibility. Use it to prototype finance prediction agents, validate prediction quality on JSONL datasets, and extend the tooling (LLM-based evidence validation, custom resolvers) for deeper audits and leaderboard-ready outputs.
+
+Abstract: The evaluator scores two parallel tracks: portfolio forecasts (PnL, hit rate, exposure, Sharpe) and FinanceX task predictions. FinanceX tasks follow four levels: Basic (Level 1) yes/no close-above-threshold, Wide Search (Level 2) multi-choice ticker sets, Deep Search (Level 3) numeric close-price, and Super Agent (Level 4) numeric range (high-low). The purple agent emits either portfolio weights or per-task predictions, and the green agent computes per-level scores with the FutureX scoring rules.
+
+| Task Level | Type | Example |
+| --- | --- | --- |
+| Level 1 (Basic) | Yes/No price outcome | Will AAPL close above $270.97 on 2025-12-22? |
+| Level 2 (Wide Search) | Multi-choice ticker set | Which tickers closed above their previous close on 2025-12-22? Select all: AAPL, MSFT, GOOGL, AMZN, TSLA. |
+| Level 3 (Deep Search) | Numeric close price | What was the closing price of MSFT on 2025-12-22? Provide USD to 2 decimals. |
+| Level 4 (Super Agent) | Numeric intraday range | What was the intraday range (high-low) for TSLA on 2025-12-22? Provide USD to 2 decimals. |
 
 ## Table of Contents
 
