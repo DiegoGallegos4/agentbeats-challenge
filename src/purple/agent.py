@@ -1,4 +1,5 @@
 from datetime import date as date_module
+import os
 from typing import Any, Iterable
 from pathlib import Path
 import pandas as pd
@@ -159,6 +160,11 @@ class Agent:
             return
 
         config = request.config or {}
+        data_root = config.get("data_root")
+        if data_root:
+            resolved_root = str(Path(data_root).expanduser().resolve())
+            portfolio_data_manager.BASE_DIR = resolved_root
+            os.environ["AGENTBEATS_DATA_DIR"] = resolved_root
         tasks = config.get("tasks")
         if tasks:
             await updater.update_status(

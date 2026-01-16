@@ -184,6 +184,11 @@ def main() -> None:
     parser.add_argument("--debug", action="store_true", help="Print request/response debug info")
     args = parser.parse_args()
 
+    required_env = ["ALPHA_VANTAGE_API_KEY", "OPENAI_API_KEY", "TAVILY_API_KEY"]
+    missing_env = [key for key in required_env if not os.environ.get(key)]
+    if missing_env:
+        print(f"Warning: missing env vars: {', '.join(missing_env)}")
+
     cfg = parse_toml(args.scenario)
 
     sink = None if args.show_logs or args.serve_only else subprocess.DEVNULL

@@ -388,6 +388,11 @@ class Agent:
             return
 
         config = request.config or {}
+        data_root = config.get("data_root")
+        if data_root:
+            resolved_root = str(self._resolve_path(data_root))
+            portfolio_data_manager.BASE_DIR = resolved_root
+            os.environ["AGENTBEATS_DATA_DIR"] = resolved_root
         benchmark_path = config.get("benchmark_path")
         if benchmark_path:
             benchmark_path = self._resolve_path(benchmark_path)
