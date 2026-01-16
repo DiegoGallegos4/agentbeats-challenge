@@ -41,6 +41,7 @@ mkdir -p data
 
 DATE="$DATE" TICKERS="$TICKERS" python - <<'PY'
 import os
+from pathlib import Path
 
 from agent.tools import data_manager as dm
 from agent.tools.sp500_utils import get_sp500_tickers
@@ -55,12 +56,23 @@ elif tickers_arg == "subset":
 else:
     tickers = [t.strip() for t in tickers_arg.split(",") if t.strip()]
 
-dm.download_all_data(tickers, date)
+base_dir = Path(os.environ.get("AGENTBEATS_DATA_DIR", Path.cwd() / "data"))
+missing = []
+for ticker in tickers:
+    market_path = base_dir / date / "market" / f"{ticker}.csv"
+    if not market_path.exists():
+        missing.append(ticker)
+
+if missing:
+    dm.download_all_data(missing, date)
+else:
+    print(f"Data already present for {len(tickers)} tickers on {date}, skipping download.")
 PY
 
 if [[ -n "$PNL_DATE" ]]; then
   DATE="$PNL_DATE" TICKERS="$TICKERS" python - <<'PY'
 import os
+from pathlib import Path
 
 from agent.tools import data_manager as dm
 from agent.tools.sp500_utils import get_sp500_tickers
@@ -75,6 +87,16 @@ elif tickers_arg == "subset":
 else:
     tickers = [t.strip() for t in tickers_arg.split(",") if t.strip()]
 
-dm.download_all_data(tickers, date)
+base_dir = Path(os.environ.get("AGENTBEATS_DATA_DIR", Path.cwd() / "data"))
+missing = []
+for ticker in tickers:
+    market_path = base_dir / date / "market" / f"{ticker}.csv"
+    if not market_path.exists():
+        missing.append(ticker)
+
+if missing:
+    dm.download_all_data(missing, date)
+else:
+    print(f"Data already present for {len(tickers)} tickers on {date}, skipping download.")
 PY
 fi

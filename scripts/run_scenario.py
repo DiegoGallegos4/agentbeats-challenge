@@ -131,10 +131,13 @@ def merge_parts(parts: list[Part]) -> str:
     return "\n".join(chunks)
 
 
-async def run_client(cfg: dict) -> int:
+async def run_client(cfg: dict, debug: bool = False) -> int:
     endpoint = f"http://{cfg['green_agent']['host']}:{cfg['green_agent']['port']}"
     payload = build_request(cfg)
     text = json.dumps(payload)
+    if debug:
+        print(f"Sending request to green agent at {endpoint}")
+        print(json.dumps(payload, indent=2))
     try:
         async with httpx.AsyncClient(timeout=60) as httpx_client:
             resolver = A2ACardResolver(httpx_client=httpx_client, base_url=endpoint)
@@ -145,6 +148,12 @@ async def run_client(cfg: dict) -> int:
             last_event = None
             async for event in client.send_message(outbound):
                 last_event = event
+                if debug:
+                    if isinstance(event, A2AMessage):
+                        print("Received message event from green agent.")
+                    else:
+                        task, _ = event
+                        print(f"Received task update: {task.status.state}")
 
         if last_event is None:
             print("No response received from green agent.")
@@ -172,6 +181,7 @@ def main() -> None:
     parser.add_argument("scenario", help="Path to scenario TOML file")
     parser.add_argument("--show-logs", action="store_true", help="Show agent stdout/stderr")
     parser.add_argument("--serve-only", action="store_true", help="Start agent servers only")
+    parser.add_argument("--debug", action="store_true", help="Print request/response debug info")
     args = parser.parse_args()
 
     cfg = parse_toml(args.scenario)
@@ -221,7 +231,7 @@ def main() -> None:
                         break
                 time.sleep(0.5)
         else:
-            sys.exit(asyncio.run(run_client(cfg)))
+            sys.exit(asyncio.run(run_client(cfg, debug=args.debug)))
 
     except KeyboardInterrupt:
         pass

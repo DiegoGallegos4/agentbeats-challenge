@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 from datetime import date, datetime
 from pathlib import Path
+from typing import Iterable
 
 import pandas as pd
 
@@ -19,14 +20,99 @@ LEVEL_MAP = {
 PORTFOLIO_TICKERS = ["AAPL", "MSFT", "GOOGL", "AMZN", "TSLA"]
 
 
-def last_month_window(today: date) -> tuple[datetime, datetime]:
-    first_of_month = today.replace(day=1)
-    last_month_end = first_of_month - pd.Timedelta(days=1)
-    last_month_start = last_month_end.replace(day=1)
-    return (
-        datetime.combine(last_month_start, datetime.min.time()),
-        datetime.combine(last_month_end, datetime.max.time()),
-    )
+def parse_date_dir(path: Path) -> date | None:
+    try:
+        return datetime.strptime(path.name, "%Y-%m-%d").date()
+    except ValueError:
+        return None
+
+
+def pick_latest_market_files(data_root: Path, tickers: Iterable[str]) -> dict[str, Path]:
+    latest = {}
+    for ticker in tickers:
+        candidates = []
+        for path in data_root.glob(f"*/market/{ticker}.csv"):
+            dir_date = parse_date_dir(path.parent.parent)
+            if dir_date is not None:
+                candidates.append((dir_date, path))
+        if candidates:
+            candidates.sort(key=lambda item: item[0], reverse=True)
+            latest[ticker] = candidates[0][1]
+    return latest
+
+
+def load_market_data(path: Path) -> pd.DataFrame:
+    df = pd.read_csv(path)
+    df["date"] = pd.to_datetime(df["date"], errors="coerce")
+    df = df.dropna(subset=["date"]).sort_values("date")
+    return df.reset_index(drop=True)
+
+
+def build_level1(records: list[dict], count: int) -> list[dict]:
+    rows = []
+    for record in records[:count]:
+        threshold = round(record["prev_close"], 2)
+        rows.append(
+            {
+                "prompt": (
+                    f'Will {record["ticker"]} close above ${threshold:.2f} on '
+                    f'{record["date"].date()}? Options: A) Yes B) No.'
+                ),
+                "ticker": record["ticker"],
+                "end_time": record["date"].isoformat(),
+            }
+        )
+    return rows
+
+
+def build_level3(records: list[dict], count: int) -> list[dict]:
+    rows = []
+    for record in records[:count]:
+        rows.append(
+            {
+                "prompt": (
+                    f'What was the closing price of {record["ticker"]} on '
+                    f'{record["date"].date()}? Provide USD to 2 decimals.'
+                ),
+                "ticker": record["ticker"],
+                "end_time": record["date"].isoformat(),
+            }
+        )
+    return rows
+
+
+def build_level4(records: list[dict], count: int) -> list[dict]:
+    rows = []
+    for record in records[:count]:
+        rows.append(
+            {
+                "prompt": (
+                    f'What was the intraday range (high-low) for {record["ticker"]} on '
+                    f'{record["date"].date()}? Provide USD to 2 decimals.'
+                ),
+                "ticker": record["ticker"],
+                "end_time": record["date"].isoformat(),
+            }
+        )
+    return rows
+
+
+def build_level2(common_dates: list[pd.Timestamp], count: int) -> list[dict]:
+    rows = []
+    for day in common_dates[:count]:
+        prompt = (
+            f"Which of these tickers closed above their previous close on {day.date()}? "
+            f"Select all that apply: {', '.join(PORTFOLIO_TICKERS)}."
+        )
+        rows.append(
+            {
+                "prompt": prompt,
+                "ticker": "MULTI",
+                "tickers": PORTFOLIO_TICKERS,
+                "end_time": day.isoformat(),
+            }
+        )
+    return rows
 
 
 def main() -> None:
@@ -35,6 +121,12 @@ def main() -> None:
         "--input",
         default="data/futurex/data/train-00000-of-00001.parquet",
         help="FutureX parquet path",
+    )
+    parser.add_argument(
+        "--max-per-level",
+        type=int,
+        default=5,
+        help="Max questions to keep per level (default: 5). Use 20 for full cap.",
     )
     parser.add_argument(
         "--output",
@@ -48,36 +140,73 @@ def main() -> None:
         raise FileNotFoundError(f"Missing input file: {input_path}")
 
     df = pd.read_parquet(input_path)
-    df["end_time"] = pd.to_datetime(df["end_time"], errors="coerce", utc=True)
+    levels_present = sorted({int(level) for level in df["level"].dropna().unique()})
+    expected_levels = sorted(LEVEL_MAP.keys())
+    if not set(expected_levels).issubset(levels_present):
+        print(
+            "Warning: FutureX levels missing from parquet. "
+            f"Expected {expected_levels}, saw {levels_present}."
+        )
 
-    start_dt, end_dt = last_month_window(date.today())
-    start_dt = start_dt.replace(tzinfo=None)
-    end_dt = end_dt.replace(tzinfo=None)
+    max_per_level = args.max_per_level if args.max_per_level is not None else 5
 
-    df_filtered = df[
-        (df["end_time"].dt.tz_convert(None) >= start_dt)
-        & (df["end_time"].dt.tz_convert(None) <= end_dt)
-    ]
+    data_root = Path("data")
+    market_files = pick_latest_market_files(data_root, PORTFOLIO_TICKERS)
+    if set(market_files.keys()) != set(PORTFOLIO_TICKERS):
+        missing = sorted(set(PORTFOLIO_TICKERS) - set(market_files.keys()))
+        raise FileNotFoundError(
+            "Missing market data for tickers: "
+            + ", ".join(missing)
+            + ". Run scripts/setup.sh to download market data."
+        )
 
-    if df_filtered.empty and df["end_time"].notna().any():
-        latest_period = df["end_time"].dt.to_period("M").max()
-        df_filtered = df[df["end_time"].dt.to_period("M") == latest_period]
-    df = df_filtered
+    price_map = {ticker: load_market_data(path) for ticker, path in market_files.items()}
+
+    records = []
+    for ticker, df_prices in price_map.items():
+        for idx in range(1, len(df_prices)):
+            prev_row = df_prices.iloc[idx - 1]
+            row = df_prices.iloc[idx]
+            records.append(
+                {
+                    "ticker": ticker,
+                    "date": row["date"],
+                    "prev_close": float(prev_row["close"]),
+                    "close": float(row["close"]),
+                    "high": float(row["high"]),
+                    "low": float(row["low"]),
+                }
+            )
+
+    records = sorted(records, key=lambda item: item["date"], reverse=True)
+
+    common_dates = None
+    for ticker, df_prices in price_map.items():
+        ticker_dates = set(df_prices["date"].iloc[1:])
+        common_dates = ticker_dates if common_dates is None else common_dates & ticker_dates
+    common_dates = sorted(common_dates, reverse=True) if common_dates else []
 
     rows = []
-    for _, row in df.iterrows():
-        level = int(row["level"]) if pd.notna(row["level"]) else None
+    level_builders = {
+        1: build_level1(records, max_per_level),
+        2: build_level2(common_dates, max_per_level),
+        3: build_level3(records, max_per_level),
+        4: build_level4(records, max_per_level),
+    }
+
+    for level, prompts in level_builders.items():
         level_name = LEVEL_MAP.get(level, "Unknown")
-        for ticker in PORTFOLIO_TICKERS:
+        for idx, prompt_row in enumerate(prompts, start=1):
             rows.append(
                 {
-                    "id": f"{row['id']}-{ticker}",
-                    "source_id": row["id"],
-                    "ticker": ticker,
-                    "end_time": row["end_time"].isoformat() if pd.notna(row["end_time"]) else None,
+                    "id": f"financex-{level}-{idx}",
+                    "source_id": f"financex-{level}",
+                    "ticker": prompt_row["ticker"],
+                    "tickers": prompt_row.get("tickers"),
+                    "end_time": prompt_row.get("end_time"),
                     "level": level,
                     "level_name": level_name,
-                    "prompt": row["prompt"],
+                    "prompt": prompt_row["prompt"],
                 }
             )
 
