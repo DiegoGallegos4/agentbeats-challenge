@@ -1,6 +1,6 @@
-# FinaceXBench
+# FutureFinanceX
 
-FinaceXBench is a finance-focused forecasting and evaluation pipeline built for the AgentBeats competition. It targets developers and researchers who want to ingest real or fixture finance events, generate structured predictions, resolve outcomes, and score them with standard metrics (Accuracy/Brier). 
+FutureFinanceX bench is a finance-focused forecasting and evaluation pipeline built for the AgentBeats competition. It targets developers and researchers who want to ingest real or fixture finance events, generate structured predictions, resolve outcomes, and score them with standard metrics (Accuracy/Brier). 
 
 Out of the box, you get CLI-driven ingestion, a stub predictor with evidence hooks (news/Alpha Vantage/EDGAR), resolution helpers (placeholders and price-close), and a green evaluator that produces run artifacts for reproducibility. Use it to prototype finance prediction agents, validate prediction quality on JSONL datasets, and extend the tooling (LLM-based evidence validation, custom resolvers) for deeper audits and leaderboard-ready outputs.
 
